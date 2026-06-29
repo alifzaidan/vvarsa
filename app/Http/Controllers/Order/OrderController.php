@@ -82,38 +82,94 @@ class OrderController extends Controller
         $tenant = app('tenant');
 
         $validated = $request->validate([
-            'customer_name'  => 'required|string|max:255',
-            'customer_phone' => 'nullable|string|max:20',
-            'notes'          => 'nullable|string',
-            'payment_method' => 'nullable|string|in:cash,transfer,qris',
-            'items'          => 'required|array|min:1',
-            'items.*.variant_id' => 'required|exists:product_variants,id',
-            'items.*.qty'        => 'required|integer|min:1',
+            'customer_name'          => 'required|string|max:255',
+            'customer_phone'         => 'nullable|string|max:20',
+            'notes'                  => 'nullable|string',
+            'payment_method'         => 'nullable|string|in:cash,transfer,qris',
+            'items'                  => 'required|array|min:1',
+            'items.*.variant_id'     => 'required|exists:product_variants,id',
+            'items.*.qty'            => 'required|integer|min:1',
+            // Paket fields — wajib ada dari frontend baru
+            'items.*.paket_isi'      => 'required|integer|in:1,3,6',
+            'items.*.paket_harga'    => 'required|integer|min:1',
         ]);
 
         DB::transaction(function () use ($validated, $tenant) {
             $orderNumber = Order::generateOrderNumber($tenant->id);
-            $subtotal    = 0;
 
-            // Compute subtotal from variant prices
+            // ── Kelompokkan item per paket ────────────────────────────────────
+            // Frontend mengirim tiap slot sebagai 1 baris dengan paket_isi & paket_harga.
+            // Kita kelompokkan buffer per paket_isi lalu tambahkan paket_harga sekali
+            // per grup — bukan per slot — sehingga total tidak membengkak.
+
             $itemsData = [];
-            foreach ($validated['items'] as $item) {
-                $variant = ProductVariant::with('recipe.ingredients')->findOrFail($item['variant_id']);
+            $subtotal  = 0;
+            $buffer    = [];         // slot-slot dalam satu paket
+            $currentPaketHarga = 0;
+            $currentPaketIsi   = 0;
+
+            foreach ($validated['items'] as $raw) {
+                $variant = ProductVariant::with('recipe.ingredients')->findOrFail($raw['variant_id']);
                 abort_if($variant->tenant_id !== $tenant->id, 403);
 
-                $lineTotal = (float) $variant->sell_price * $item['qty'];
-                $subtotal += $lineTotal;
+                $paketIsi   = (int) $raw['paket_isi'];
+                $paketHarga = (int) $raw['paket_harga'];
 
+                // Mulai grup baru jika buffer kosong
+                if (empty($buffer)) {
+                    $currentPaketIsi   = $paketIsi;
+                    $currentPaketHarga = $paketHarga;
+                }
+
+                $buffer[] = [
+                    'variant'     => $variant,
+                    'paket_isi'   => $paketIsi,
+                    'paket_harga' => $paketHarga,
+                ];
+
+                // Saat buffer penuh (jumlah slot = paket_isi), flush ke itemsData
+                if (count($buffer) >= $currentPaketIsi) {
+                    // Harga paket dibagi rata ke tiap slot agar total = paket_harga
+                    $perSlot  = (int) round($currentPaketHarga / count($buffer));
+                    $subtotal += $currentPaketHarga;
+
+                    foreach ($buffer as $idx => $slot) {
+                        // Slot terakhir menyerap sisa pembulatan
+                        $slotHarga = ($idx === count($buffer) - 1)
+                            ? $currentPaketHarga - ($perSlot * (count($buffer) - 1))
+                            : $perSlot;
+
+                        $itemsData[] = [
+                            'variant_id'   => $slot['variant']->id,
+                            'variant_name' => $slot['variant']->name,
+                            'qty'          => 1,
+                            'unit_price'   => $slotHarga,   // harga proporsional per slot
+                            'unit_hpp'     => $slot['variant']->hpp,
+                            'total'        => $slotHarga,
+                            'paket_isi'    => $currentPaketIsi,
+                            'paket_harga'  => $currentPaketHarga,
+                        ];
+                    }
+
+                    $buffer = [];
+                }
+            }
+
+            // Sisa buffer (data tidak lengkap dari frontend — fallback aman)
+            foreach ($buffer as $slot) {
                 $itemsData[] = [
-                    'variant_id'   => $variant->id,
-                    'variant_name' => $variant->name,
-                    'qty'          => $item['qty'],
-                    'unit_price'   => $variant->sell_price,
-                    'unit_hpp'     => $variant->hpp,
-                    'total'        => $lineTotal,
+                    'variant_id'   => $slot['variant']->id,
+                    'variant_name' => $slot['variant']->name,
+                    'qty'          => 1,
+                    'unit_price'   => 0,
+                    'unit_hpp'     => $slot['variant']->hpp,
+                    'total'        => 0,
+                    'paket_isi'    => $slot['paket_isi'],
+                    'paket_harga'  => $slot['paket_harga'],
                 ];
             }
 
+            // ── Buat transaksi jika langsung bayar ───────────────────────────
             $transactionId = null;
             if (!empty($validated['payment_method'])) {
                 $transaction = Transaction::create([
@@ -130,6 +186,7 @@ class OrderController extends Controller
                 $transactionId = $transaction->id;
             }
 
+            // ── Simpan order ─────────────────────────────────────────────────
             $order = Order::create([
                 'tenant_id'      => $tenant->id,
                 'order_number'   => $orderNumber,
@@ -184,7 +241,6 @@ class OrderController extends Controller
         DB::transaction(function () use ($order, $validated, $tenant) {
             $order->update(['status' => $validated['status']]);
 
-            // Deduct stock if transitioning to processing or done
             if (in_array($validated['status'], ['processing', 'done'])) {
                 $this->deductStock($order, $tenant);
             }
@@ -207,7 +263,6 @@ class OrderController extends Controller
         ]);
 
         DB::transaction(function () use ($order, $validated, $tenant) {
-            // 1. Buat transaksi income
             $transaction = Transaction::create([
                 'tenant_id'      => $tenant->id,
                 'type'           => 'income',
@@ -220,7 +275,6 @@ class OrderController extends Controller
                 'user_id'        => auth()->id(),
             ]);
 
-            // 2. Update order: lunas, set transaction_id, status done
             $order->update([
                 'payment_status' => 'paid',
                 'payment_method' => $validated['payment_method'],
@@ -228,7 +282,6 @@ class OrderController extends Controller
                 'status'         => 'done',
             ]);
 
-            // 3. Kurangi stok bahan mentah berdasarkan BOM jika belum dikurangi
             $this->deductStock($order, $tenant);
         });
 
@@ -237,7 +290,7 @@ class OrderController extends Controller
     }
 
     /**
-     * Helper to deduct raw ingredients stock based on recipe formulas
+     * Kurangi stok bahan mentah berdasarkan BOM resep
      */
     private function deductStock(Order $order, $tenant): void
     {

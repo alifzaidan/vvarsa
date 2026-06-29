@@ -11,19 +11,16 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->string('order_number')->unique(); // ORD-20260627-001
+            $table->string('order_number')->unique();
             $table->string('customer_name');
             $table->string('customer_phone')->nullable();
-            // Status produksi: pending (baru masuk) -> processing (sedang dibuat) -> done (selesai) -> cancelled
             $table->string('status')->default('pending');
-            // Status pembayaran: unpaid, paid
             $table->string('payment_status')->default('unpaid');
-            $table->string('payment_method')->nullable(); // cash, transfer, qris
+            $table->string('payment_method')->nullable();
             $table->decimal('subtotal', 14, 2)->default(0);
             $table->decimal('discount', 14, 2)->default(0);
             $table->decimal('total', 14, 2)->default(0);
             $table->text('notes')->nullable();
-            // FK ke transactions saat pesanan dibayar
             $table->foreignId('transaction_id')->nullable()->constrained('transactions')->nullOnDelete();
             $table->boolean('stock_deducted')->default(false);
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
@@ -35,11 +32,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('order_id')->constrained()->cascadeOnDelete();
             $table->foreignId('variant_id')->nullable()->constrained('product_variants')->nullOnDelete();
-            $table->string('variant_name'); // snapshot nama varian
+            $table->string('variant_name');
             $table->integer('qty');
-            $table->decimal('unit_price', 12, 2);  // harga per unit saat order
-            $table->decimal('unit_hpp', 12, 2)->default(0); // HPP per unit saat order (snapshot)
+            $table->decimal('unit_price', 12, 2);
+            $table->decimal('unit_hpp', 12, 2)->default(0);
             $table->decimal('total', 14, 2);
+            $table->unsignedTinyInteger('paket_isi')->nullable();
+            $table->unsignedInteger('paket_harga')->nullable();
             $table->timestamps();
         });
     }

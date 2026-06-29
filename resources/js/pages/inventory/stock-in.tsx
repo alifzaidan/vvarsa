@@ -24,8 +24,8 @@ interface Props {
 
 const stockInSchema = z.object({
     product_id: z.string().min(1, 'Produk wajib dipilih'),
-    qty: z.number().min(1, 'Jumlah masuk minimal 1'),
-    unit_cost: z.number().min(0, 'Harga modal/unit tidak boleh negatif'),
+    qty: z.coerce.number().min(1, 'Jumlah masuk minimal 1'),
+    unit_cost: z.coerce.number().min(0, 'Harga modal/unit tidak boleh negatif'),
     reference: z.string().optional(),
     note: z.string().optional(),
     movement_date: z.string().min(1, 'Tanggal wajib diisi'),
@@ -48,7 +48,7 @@ export default function StockIn({ products }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setClientErrors({});
-        
+
         const result = stockInSchema.safeParse(data);
         if (!result.success) {
             const newErrors: Record<string, string> = {};
@@ -59,7 +59,7 @@ export default function StockIn({ products }: Props) {
             setClientErrors(newErrors);
             return;
         }
-        
+
         post('/inventory/stock-in');
     };
 
@@ -84,7 +84,7 @@ export default function StockIn({ products }: Props) {
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="bg-card border-border rounded-2xl border p-5 shadow-sm">
                         <div className="space-y-4">
-                             <div>
+                            <div>
                                 <Label htmlFor="product_id" className="mb-1.5 block">Produk *</Label>
                                 <Select
                                     value={data.product_id}
@@ -142,14 +142,14 @@ export default function StockIn({ products }: Props) {
                                     {displayError('qty') && <p className="mt-1 text-xs text-rose-500">{displayError('qty')}</p>}
                                 </div>
                                 <div>
-                                     <Label htmlFor="unit_cost" className="mb-1.5 block">Harga Modal/Unit (Rp)</Label>
-                                     <Input
-                                         id="unit_cost"
-                                         type="text"
-                                         value={formatRupiah(data.unit_cost)}
-                                         onChange={(e) => setData('unit_cost', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
-                                     />
-                                 </div>
+                                    <Label htmlFor="unit_cost" className="mb-1.5 block">Harga Modal/Unit (Rp)</Label>
+                                    <Input
+                                        id="unit_cost"
+                                        type="text"
+                                        value={formatRupiah(data.unit_cost)}
+                                        onChange={(e) => setData('unit_cost', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-1.5">
@@ -193,7 +193,7 @@ export default function StockIn({ products }: Props) {
                         </Button>
                         <Button
                             type="submit"
-                            disabled={processing || !data.product_id}
+                            disabled={processing}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-70 rounded-xl px-5"
                         >
                             {processing ? 'Menyimpan...' : 'Simpan Stok Masuk'}

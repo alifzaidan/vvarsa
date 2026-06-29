@@ -192,8 +192,8 @@ export interface Recipe {
     description: string | null;
     portion_qty: number;
     ingredients?: RecipeIngredient[];
-    total_cost?: number; // HPP 1 adonan
-    hpp?: number; // HPP per pcs / unit
+    total_cost?: number;
+    hpp?: number;
     created_at?: string;
 }
 
@@ -206,7 +206,7 @@ export interface VariantRecipe {
     qty: number;
     unit: string;
     ingredient_cost: number;
-    total_cost?: number; // computed
+    total_cost?: number;
 }
 
 export interface ProductVariant {
@@ -222,9 +222,9 @@ export interface ProductVariant {
     is_active: boolean;
     recipe?: Recipe;
     recipes?: VariantRecipe[];
-    hpp?: number;    // computed: sum of ingredient_cost * qty
-    margin?: number; // computed: (sell_price - hpp) / sell_price * 100
-    profit?: number; // computed: sell_price - hpp
+    hpp?: number;
+    margin?: number;
+    profit?: number;
     created_at?: string;
 }
 
@@ -240,6 +240,8 @@ export interface OrderItem {
     unit_price: number;
     unit_hpp: number;
     total: number;
+    paket_isi: number | null;   // jumlah isi paket (1 / 3 / 6)
+    paket_harga: number | null; // harga paket fix, bukan unit_price × qty
 }
 
 export interface Order {
@@ -268,4 +270,3 @@ export interface OrderSummaryItem {
     variant_name: string;
     total_qty: number;
 }
-
