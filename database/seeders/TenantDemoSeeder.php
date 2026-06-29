@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\ExpenseCategory;
 use App\Models\Product;
 use App\Models\ProductCategory;
+use App\Models\Package;
 use App\Models\ProductVariant;
 use App\Models\Recipe;
 use App\Models\RecipeIngredient;
@@ -46,8 +47,8 @@ class TenantDemoSeeder extends Seeder
         ]);
 
         $owner1 = User::create([
-            'name'      => 'Tini Rahayu',
-            'email'     => 'tini@gmail.com',
+            'name'      => 'Alif Zaidan',
+            'email'     => 'alif@gmail.com',
             'password'  => Hash::make('password'),
             'tenant_id' => $tenant1->id,
             'is_active' => true,
@@ -137,7 +138,6 @@ class TenantDemoSeeder extends Seeder
         foreach ($products as [$name, $cat, $unit, $stock, $pPrice, $pQty, $sell]) {
             $p = Product::create([
                 'tenant_id'      => $tenant->id,
-                'sku'            => 'SKU-' . strtoupper(substr(str_replace(' ', '', $name), 0, 6)) . rand(100, 999),
                 'name'           => $name,
                 'category_id'    => $categories[$cat]->id,
                 'unit'           => $unit,
@@ -220,12 +220,6 @@ class TenantDemoSeeder extends Seeder
             'Cup Kertas'   => 12.0,
         ];
 
-        $sizes = [
-            1 => ['name' => '1 pcs', 'price' => 7000],
-            3 => ['name' => '3 pcs', 'price' => 18000],
-            6 => ['name' => '6 pcs', 'price' => 35000],
-        ];
-
         foreach ($variantsData as $flavor => $data) {
             // 1. Create a standalone Recipe for the flavor (representing 1 adonan recipe of 12 pcs)
             $recipe = Recipe::create([
@@ -261,24 +255,48 @@ class TenantDemoSeeder extends Seeder
                 ]);
             }
 
-            // 2. Create the variants pointing to this recipe with sizes as recipe_qty multipliers
-            foreach ($sizes as $qtyMultiplier => $sizeInfo) {
-                $variantName = "{$flavor} ({$sizeInfo['name']})";
-                $cleanFlavor = strtoupper(str_replace([' ', '(', ')'], '', $variantName));
-                $variantSku  = 'VAR-' . substr($cleanFlavor, 0, 12) . '-' . rand(1000, 9999);
+            // 2. Create only the base variant pointing to this recipe (1 pcs)
+            $variantName = "Mochi {$flavor}";
+            $cleanFlavor = strtoupper(str_replace([' ', '(', ')'], '', $variantName));
 
-                ProductVariant::create([
-                    'tenant_id'   => $tenant->id,
-                    'recipe_id'   => $recipe->id,
-                    'recipe_qty'  => $qtyMultiplier,
-                    'sku'         => $variantSku,
-                    'name'        => $variantName,
-                    'sell_price'  => $sizeInfo['price'],
-                    'description' => "Mochi rasa {$flavor} isi {$sizeInfo['name']}",
-                    'is_active'   => true,
-                ]);
-            }
+            ProductVariant::create([
+                'tenant_id'   => $tenant->id,
+                'recipe_id'   => $recipe->id,
+                'recipe_qty'  => 1.000,
+                'name'        => $variantName,
+                'sell_price'  => 7000,
+                'description' => "Mochi rasa {$flavor} (Satuan)",
+                'is_active'   => true,
+            ]);
         }
+
+        // 3. Seed default Packages
+        Package::create([
+            'tenant_id'   => $tenant->id,
+            'name'        => 'Paket Satuan',
+            'capacity'    => 1,
+            'price'       => 7000,
+            'is_active'   => true,
+            'description' => 'Mochi eceran per 1 pcs',
+        ]);
+
+        Package::create([
+            'tenant_id'   => $tenant->id,
+            'name'        => 'Paket 3 Mix',
+            'capacity'    => 3,
+            'price'       => 18000,
+            'is_active'   => true,
+            'description' => 'Mochi paket isi 3 pcs (bebas pilih rasa)',
+        ]);
+
+        Package::create([
+            'tenant_id'   => $tenant->id,
+            'name'        => 'Paket 6 Mix',
+            'capacity'    => 6,
+            'price'       => 35000,
+            'is_active'   => true,
+            'description' => 'Mochi paket isi 6 pcs (bebas pilih rasa)',
+        ]);
 
         // Expense categories
         $expCats = [];

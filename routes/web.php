@@ -10,6 +10,7 @@ use App\Http\Controllers\Inventory\ProductVariantController;
 use App\Http\Controllers\Inventory\RecipeController;
 use App\Http\Controllers\Inventory\StockMovementController;
 use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Order\PackageController;
 use App\Http\Controllers\Order\PosController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\Tax\TaxController;
@@ -139,6 +140,16 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTenantMiddlewa
             Route::get('/{recipe}/edit', [RecipeController::class, 'edit'])->name('edit');
             Route::put('/{recipe}', [RecipeController::class, 'update'])->name('update');
             Route::delete('/{recipe}', [RecipeController::class, 'destroy'])->name('destroy');
+        });
+
+        // Paket Produk (Owner only)
+        Route::prefix('packages')->name('packages.')->group(function () {
+            Route::get('/', [PackageController::class, 'index'])->name('index');
+            Route::get('/create', [PackageController::class, 'create'])->name('create');
+            Route::post('/', [PackageController::class, 'store'])->name('store');
+            Route::get('/{package}/edit', [PackageController::class, 'edit'])->name('edit');
+            Route::put('/{package}', [PackageController::class, 'update'])->name('update');
+            Route::delete('/{package}', [PackageController::class, 'destroy'])->name('destroy');
         });
 
         // Finance

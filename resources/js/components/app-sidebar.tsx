@@ -219,6 +219,11 @@ export function AppSidebar() {
             href: '/recipes',
             icon: BookOpen,
         });
+        salesNavItems.unshift({
+            title: 'Paket Produk',
+            href: '/packages',
+            icon: Package,
+        });
     }
 
     return (
