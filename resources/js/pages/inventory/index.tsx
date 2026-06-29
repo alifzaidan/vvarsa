@@ -40,19 +40,9 @@ export default function InventoryIndex({ products, categories, filters, total_co
 
     const handleToggleActive = (product: Product) => {
         const isActive = product.is_active;
-        const actionText = isActive ? 'Menonaktifkan' : 'Mengaktifkan';
-
-        goeyToast.info(`${actionText} produk "${product.name}"...`);
-
+        
         router.patch(`/inventory/${product.id}/toggle-active`, {}, {
             preserveScroll: true,
-            onSuccess: () => {
-                goeyToast.success(
-                    isActive
-                        ? `Produk "${product.name}" berhasil dinonaktifkan`
-                        : `Produk "${product.name}" berhasil diaktifkan`
-                );
-            },
             onError: () => {
                 goeyToast.error(`Gagal mengubah status produk "${product.name}"`);
             },
