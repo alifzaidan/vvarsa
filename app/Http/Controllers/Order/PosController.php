@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Models\ProductVariant;
 use App\Models\Package;
+use App\Models\PaymentMethod;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,9 +31,15 @@ class PosController extends Controller
             ->orderBy('capacity')
             ->get();
 
+        $paymentMethods = PaymentMethod::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->get();
+
         return Inertia::render('orders/pos', [
             'variants' => $variants,
             'packages' => $packages,
+            'paymentMethods' => $paymentMethods,
         ]);
     }
 }

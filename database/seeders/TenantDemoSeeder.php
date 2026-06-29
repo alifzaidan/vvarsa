@@ -15,6 +15,7 @@ use App\Models\Tenant;
 use App\Models\TenantSubscription;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\PaymentMethod;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -337,5 +338,38 @@ class TenantDemoSeeder extends Seeder
                 'user_id'             => $owner->id,
             ]);
         }
+
+        // Default Payment Methods
+        PaymentMethod::create([
+            'tenant_id'      => $tenant->id,
+            'name'           => 'Tunai (Cash)',
+            'account_name'   => null,
+            'account_number' => null,
+            'is_active'      => true,
+        ]);
+
+        PaymentMethod::create([
+            'tenant_id'      => $tenant->id,
+            'name'           => 'Transfer Bank BRI',
+            'account_name'   => 'Mochi Delight',
+            'account_number' => '1223-01-004567-50-2',
+            'is_active'      => true,
+        ]);
+
+        PaymentMethod::create([
+            'tenant_id'      => $tenant->id,
+            'name'           => 'ShopeePay',
+            'account_name'   => 'Mochi Delight',
+            'account_number' => '0812-1111-2222',
+            'is_active'      => true,
+        ]);
+
+        PaymentMethod::create([
+            'tenant_id'      => $tenant->id,
+            'name'           => 'QRIS',
+            'account_name'   => 'Mochi Delight',
+            'account_number' => 'QRIS Vvarsa',
+            'is_active'      => true,
+        ]);
     }
 }
