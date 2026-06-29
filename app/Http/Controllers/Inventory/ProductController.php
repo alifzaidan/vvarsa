@@ -37,11 +37,11 @@ class ProductController extends Controller
         $categories = ProductCategory::where('tenant_id', $tenant->id)->get(['id', 'name']);
 
         return Inertia::render('inventory/index', [
-            'products'       => $products,
-            'categories'     => $categories,
-            'filters'        => $request->only(['search', 'category', 'low_stock']),
-            'total_count'    => Product::where('tenant_id', $tenant->id)->count(),
-            'max_products'   => $tenant->max_products,
+            'products'     => $products,
+            'categories'   => $categories,
+            'filters'      => $request->only(['search', 'category', 'low_stock']),
+            'total_count'  => Product::where('tenant_id', $tenant->id)->count(),
+            'max_products' => $tenant->max_products,
         ]);
     }
 
@@ -59,7 +59,6 @@ class ProductController extends Controller
     {
         $tenant = app('tenant');
 
-        // Check plan limit
         if (!$tenant->canAddProduct()) {
             return back()->withErrors(['limit' => "Batas maksimal produk ({$tenant->max_products}) sudah tercapai. Upgrade paket untuk menambah lebih banyak produk."]);
         }
@@ -82,7 +81,8 @@ class ProductController extends Controller
             'sell_price'    => $validated['sell_price'] ?? 0,
         ]));
 
-        return redirect()->route('inventory.index')->with('success', "Produk \"{$product->name}\" berhasil ditambahkan.");
+        return redirect()->route('inventory.index')
+            ->with('success', "Produk \"{$product->name}\" berhasil ditambahkan.");
     }
 
     public function edit(Product $product): Response
@@ -119,16 +119,34 @@ class ProductController extends Controller
             'sell_price' => $validated['sell_price'] ?? 0,
         ]));
 
-        return redirect()->route('inventory.index')->with('success', "Produk \"{$product->name}\" berhasil diperbarui.");
+        return redirect()->route('inventory.index')
+            ->with('success', "Produk \"{$product->name}\" berhasil diperbarui.");
     }
 
-    public function destroy(Product $product)
+    /**
+     * Toggle status aktif / nonaktif produk
+     */
+    public function toggleActive(Product $product)
     {
         $tenant = app('tenant');
         abort_if($product->tenant_id !== $tenant->id, 403);
 
-        $product->update(['is_active' => false]);
+        $product->update(['is_active' => !$product->is_active]);
 
-        return back()->with('success', 'Produk berhasil dinonaktifkan.');
+        $status = $product->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
+        return back()->with('success', "Produk \"{$product->name}\" berhasil {$status}.");
     }
+
+    public function destroy(Product $product)
+{
+    $tenant = app('tenant');
+    abort_if($product->tenant_id !== $tenant->id, 403);
+
+    $name = $product->name;
+
+    $product->delete();
+
+    return back()->with('success', "Produk \"{$name}\" berhasil dihapus.");
+}
 }

@@ -69,6 +69,7 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTenantMiddlewa
             Route::get('/opname', [StockMovementController::class, 'opname'])->name('opname');
             Route::post('/opname', [StockMovementController::class, 'processOpname'])->name('opname.store');
             Route::get('/history', [StockMovementController::class, 'history'])->name('history');
+            Route::patch('/{product}/toggle-active', [ProductController::class, 'toggleActive'])->name('inventory.toggle-active');
         });
 
         // Events

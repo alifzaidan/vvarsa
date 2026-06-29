@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { columns } from './columns';
 import { DataTable } from './data-table';
+import { goeyToast } from 'goey-toast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Inventori', href: '/inventory' },
@@ -28,14 +29,37 @@ export default function InventoryIndex({ products, categories, filters, total_co
     const [category, setCategory] = useState(filters.category || 'all');
 
     const applyFilter = () => {
-        router.get('/inventory', { 
-            search, 
-            category: category === 'all' ? '' : category 
-        }, { 
-            preserveState: true, 
-            replace: true 
+        router.get('/inventory', {
+            search,
+            category: category === 'all' ? '' : category,
+        }, {
+            preserveState: true,
+            replace: true,
         });
     };
+
+    const handleToggleActive = (product: Product) => {
+        const isActive = product.is_active;
+        const actionText = isActive ? 'Menonaktifkan' : 'Mengaktifkan';
+
+        goeyToast.info(`${actionText} produk "${product.name}"...`);
+
+        router.patch(`/inventory/${product.id}/toggle-active`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                goeyToast.success(
+                    isActive
+                        ? `Produk "${product.name}" berhasil dinonaktifkan`
+                        : `Produk "${product.name}" berhasil diaktifkan`
+                );
+            },
+            onError: () => {
+                goeyToast.error(`Gagal mengubah status produk "${product.name}"`);
+            },
+        });
+    };
+
+    const tableColumns = columns(handleToggleActive);
 
     const usagePercent = Math.round((total_count / max_products) * 100);
 
@@ -54,9 +78,7 @@ export default function InventoryIndex({ products, categories, filters, total_co
                     </div>
                     <div className="flex gap-2">
                         <Button variant="secondary" asChild className="rounded-xl">
-                            <Link href="/inventory/stock-in">
-                                Stok Masuk
-                            </Link>
+                            <Link href="/inventory/stock-in">Stok Masuk</Link>
                         </Button>
                         <Button asChild className="rounded-xl inline-flex items-center gap-2">
                             <Link href="/inventory/create">
@@ -82,7 +104,9 @@ export default function InventoryIndex({ products, categories, filters, total_co
                     {usagePercent >= 90 && (
                         <p className="mt-2 flex items-center gap-1 text-xs text-rose-500">
                             <AlertTriangle size={12} />
-                            Mendekati batas produk. <Link href="/subscription" className="underline">Upgrade paket</Link> untuk menambah lebih banyak produk.
+                            Mendekati batas produk.{' '}
+                            <Link href="/subscription" className="underline">Upgrade paket</Link>{' '}
+                            untuk menambah lebih banyak produk.
                         </p>
                     )}
                 </div>
@@ -100,12 +124,9 @@ export default function InventoryIndex({ products, categories, filters, total_co
                             className="pl-9 rounded-xl w-full"
                         />
                     </div>
-                    
+
                     <div className="w-full sm:w-48">
-                        <Select
-                            value={category}
-                            onValueChange={(val) => setCategory(val)}
-                        >
+                        <Select value={category} onValueChange={setCategory}>
                             <SelectTrigger className="rounded-xl w-full">
                                 <SelectValue placeholder="Kategori" />
                             </SelectTrigger>
@@ -118,17 +139,14 @@ export default function InventoryIndex({ products, categories, filters, total_co
                         </Select>
                     </div>
 
-                    <Button
-                        onClick={applyFilter}
-                        className="rounded-xl w-full sm:w-auto px-6"
-                    >
+                    <Button onClick={applyFilter} className="rounded-xl w-full sm:w-auto px-6">
                         Filter
                     </Button>
                 </div>
 
                 {/* Products TanStack Table */}
                 <div className="space-y-4">
-                    <DataTable columns={columns} data={products.data} />
+                    <DataTable columns={tableColumns} data={products.data} />
 
                     {/* Pagination */}
                     {products.last_page > 1 && (
@@ -140,7 +158,7 @@ export default function InventoryIndex({ products, categories, filters, total_co
                                 {products.links.map((link, i) => (
                                     <Button
                                         key={i}
-                                        variant={link.active ? "default" : "outline"}
+                                        variant={link.active ? 'default' : 'outline'}
                                         disabled={!link.url}
                                         onClick={() => link.url && router.get(link.url)}
                                         className="h-8 px-3 rounded-lg text-xs"

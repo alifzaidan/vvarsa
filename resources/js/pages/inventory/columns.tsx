@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Link, router } from '@inertiajs/react';
 import { ColumnDef } from '@tanstack/react-table';
-import { Edit, Folder, Trash, Package } from 'lucide-react';
+import { Edit, Trash, Package, ToggleLeft, ToggleRight } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils-mrp';
 import { type Product } from '@/types/mrp';
 
@@ -38,15 +38,20 @@ const getStockBadge = (product: Product) => {
     );
 };
 
-function ProductActions({ product }: { product: Product }) {
+function ProductActions({
+    product,
+    onToggleActive,
+}: {
+    product: Product;
+    onToggleActive: (product: Product) => void;
+}) {
     const handleDelete = () => {
-        router.delete(`/inventory/${product.id}`, {
-            preserveScroll: true,
-        });
+        router.delete(`/inventory/${product.id}`, { preserveScroll: true });
     };
 
     return (
         <div className="flex items-center justify-center gap-1">
+            {/* Edit */}
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Button variant="ghost" size="icon" asChild>
@@ -55,17 +60,41 @@ function ProductActions({ product }: { product: Product }) {
                         </Link>
                     </Button>
                 </TooltipTrigger>
+                <TooltipContent><p>Edit Produk</p></TooltipContent>
+            </Tooltip>
+
+            {/* Toggle Aktif / Nonaktif (SAMAKAN STYLE DENGAN TENANT) */}
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onToggleActive(product)}
+                        className={`h-8 w-8 hover:bg-muted ${product.is_active
+                                ? 'text-rose-500'
+                                : 'text-emerald-500'
+                            }`}
+                    >
+                        {product.is_active ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                    </Button>
+                </TooltipTrigger>
+
                 <TooltipContent>
-                    <p>Edit Produk</p>
+                    <p>{product.is_active ? 'Nonaktifkan' : 'Aktifkan'} Produk</p>
                 </TooltipContent>
             </Tooltip>
 
+            {/* Hapus */}
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div>
                         <DeleteConfirmDialog
                             trigger={
-                                <Button variant="link" size="icon" className="size-8 text-red-500 hover:cursor-pointer">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                >
                                     <Trash size={16} />
                                     <span className="sr-only">Hapus Produk</span>
                                 </Button>
@@ -76,83 +105,92 @@ function ProductActions({ product }: { product: Product }) {
                         />
                     </div>
                 </TooltipTrigger>
-                <TooltipContent>
-                    <p>Hapus Produk</p>
-                </TooltipContent>
+                <TooltipContent><p>Hapus Produk</p></TooltipContent>
             </Tooltip>
         </div>
     );
 }
 
-export const columns: ColumnDef<Product>[] = [
-    {
-        accessorKey: 'no',
-        header: 'No',
-        cell: ({ row }) => {
-            const index = row.index + 1;
-            return <div className="font-medium">{index}</div>;
+export const columns = (
+    onToggleActive: (product: Product) => void,
+): ColumnDef<Product>[] => [
+        {
+            accessorKey: 'no',
+            header: 'No',
+            cell: ({ row }) => <div className="font-medium">{row.index + 1}</div>,
         },
-    },
-    {
-        accessorKey: 'name',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Produk" />,
-        cell: ({ row }) => {
-            return (
-                <div className="flex items-center gap-2">
-                    <div className="bg-slate-100 p-1.5 rounded-lg text-slate-500">
-                        <Package size={16} />
+        {
+            accessorKey: 'name',
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Produk" />,
+            cell: ({ row }) => {
+                const product = row.original;
+                return (
+                    <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${product.is_active ? 'bg-slate-100 text-slate-500' : 'bg-slate-50 text-slate-300'}`}>
+                            <Package size={16} />
+                        </div>
+                        <div>
+                            <div className={`font-medium text-sm ${product.is_active ? 'text-foreground' : 'text-muted-foreground line-through'}`}>
+                                {product.name}
+                            </div>
+                            {product.sku && (
+                                <div className="text-muted-foreground font-mono text-xs">{product.sku}</div>
+                            )}
+                        </div>
+                        {!product.is_active && (
+                            <Badge variant="outline" className="text-[10px] border-slate-200 text-slate-400 ml-1">
+                                Nonaktif
+                            </Badge>
+                        )}
                     </div>
-                    <div>
-                        <div className="font-medium text-sm text-foreground">{row.original.name}</div>
-                        {row.original.sku && <div className="text-muted-foreground font-mono text-xs">{row.original.sku}</div>}
-                    </div>
-                </div>
-            );
+                );
+            },
         },
-    },
-    {
-        accessorKey: 'category',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Kategori" />,
-        cell: ({ row }) => {
-            return (
+        {
+            accessorKey: 'category',
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Kategori" />,
+            cell: ({ row }) => (
                 <span className="text-muted-foreground text-sm">
                     {row.original.category?.name || '—'}
                 </span>
-            );
+            ),
         },
-    },
-    {
-        accessorKey: 'purchase_price',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Harga Beli Kemasan" />,
-        cell: ({ row }) => {
-            const product = row.original;
-            return (
-                <div className="text-right">
-                    <div className="font-medium">{formatRupiah(product.purchase_price)}</div>
-                    <div className="text-[11px] text-muted-foreground">
-                        per {parseFloat(String(product.purchase_qty))} {product.unit}
+        {
+            accessorKey: 'purchase_price',
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Harga Beli Kemasan" />,
+            cell: ({ row }) => {
+                const product = row.original;
+                return (
+                    <div className="text-right">
+                        <div className="font-medium">{formatRupiah(product.purchase_price)}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                            per {parseFloat(String(product.purchase_qty))} {product.unit}
+                        </div>
                     </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'sell_price',
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Harga Jual" />,
+            cell: ({ row }) => (
+                <div className="text-right font-semibold text-slate-900 dark:text-slate-50">
+                    {formatRupiah(row.original.sell_price)}
                 </div>
-            );
+            ),
         },
-    },
-    {
-        accessorKey: 'sell_price',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Harga Jual" />,
-        cell: ({ row }) => {
-            return <div className="text-right font-semibold text-slate-900 dark:text-slate-50">{formatRupiah(row.original.sell_price)}</div>;
+        {
+            accessorKey: 'current_stock',
+            header: ({ column }) => <DataTableColumnHeader column={column} title="Stok" />,
+            cell: ({ row }) => (
+                <div className="text-center">{getStockBadge(row.original)}</div>
+            ),
         },
-    },
-    {
-        accessorKey: 'current_stock',
-        header: ({ column }) => <DataTableColumnHeader column={column} title="Stok" />,
-        cell: ({ row }) => {
-            return <div className="text-center">{getStockBadge(row.original)}</div>;
+        {
+            id: 'actions',
+            header: () => <div className="text-center">Aksi</div>,
+            cell: ({ row }) => (
+                <ProductActions product={row.original} onToggleActive={onToggleActive} />
+            ),
         },
-    },
-    {
-        id: 'actions',
-        header: () => <div className="text-center">Aksi</div>,
-        cell: ({ row }) => <ProductActions product={row.original} />,
-    },
-];
+    ];

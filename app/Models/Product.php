@@ -36,10 +36,13 @@ class Product extends Model
     protected static function booted()
     {
         static::saving(function ($product) {
-            if ($product->purchase_qty > 0) {
-                $product->cost_price = $product->purchase_price / $product->purchase_qty;
-            } else {
-                $product->cost_price = $product->purchase_price;
+            // Hanya recalculate cost_price jika purchase_price atau purchase_qty berubah
+            if ($product->isDirty('purchase_price') || $product->isDirty('purchase_qty')) {
+                if ($product->purchase_qty > 0) {
+                    $product->cost_price = $product->purchase_price / $product->purchase_qty;
+                } else {
+                    $product->cost_price = $product->purchase_price;
+                }
             }
         });
     }
