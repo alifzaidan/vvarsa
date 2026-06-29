@@ -15,13 +15,17 @@ class OrderItem extends Model
         'unit_price',
         'unit_hpp',
         'total',
+        'paket_isi',
+        'paket_harga',
     ];
 
     protected $casts = [
-        'qty'        => 'integer',
-        'unit_price' => 'decimal:2',
-        'unit_hpp'   => 'decimal:2',
-        'total'      => 'decimal:2',
+        'qty'         => 'integer',
+        'unit_price'  => 'decimal:2',
+        'unit_hpp'    => 'decimal:2',
+        'total'       => 'decimal:2',
+        'paket_isi'   => 'integer',
+        'paket_harga' => 'integer',
     ];
 
     public function order(): BelongsTo

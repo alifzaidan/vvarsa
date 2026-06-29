@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Package;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\Recipe;
 use App\Models\StockMovement;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -72,8 +74,15 @@ class OrderController extends Controller
                 return $v;
             });
 
+        $packages = Package::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->with('variants')
+            ->orderBy('capacity')
+            ->get();
+
         return Inertia::render('orders/create', [
             'variants' => $variants,
+            'packages' => $packages,
         ]);
     }
 

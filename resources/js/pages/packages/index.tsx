@@ -1,51 +1,61 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { type PaginatedData, type ProductVariant } from '@/types/mrp';
+import { type ProductVariant, type PaginatedData } from '@/types/mrp';
 import { Head, Link, router } from '@inertiajs/react';
-import { FlaskConical, PlusCircle, Search } from 'lucide-react';
+import { Package, PlusCircle, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { columns } from './columns';
 import { DataTable } from './data-table';
 
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Varian Produk', href: '/variants' },
-];
+interface PackageModel {
+    id: number;
+    name: string;
+    capacity: number;
+    price: string | number;
+    is_active: boolean;
+    description: string | null;
+    variants?: ProductVariant[];
+}
 
 interface Props {
-    variants: PaginatedData<ProductVariant & { hpp: number; margin: number; profit: number }>;
+    packages: PaginatedData<PackageModel>;
     filters: { search?: string };
 }
 
-export default function VariantsIndex({ variants, filters }: Props) {
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Paket Produk', href: '/packages' },
+];
+
+export default function PackagesIndex({ packages, filters }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get('/variants', { search }, { preserveState: true });
+        router.get('/packages', { search }, { preserveState: true });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Varian Produk" />
+            <Head title="Manajemen Paket Produk" />
 
             <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                            <FlaskConical className="text-violet-500" size={26} />
-                            Varian Produk
+                            <Package className="text-indigo-500" size={26} />
+                            Manajemen Paket Produk
                         </h1>
                         <p className="text-muted-foreground text-sm mt-0.5">
-                            Produk yang dijual beserta resep & kalkulasi HPP otomatis
+                            Konfigurasi paket isi mochi (kapasitas, harga bundle, dan batas varian)
                         </p>
                     </div>
-                    <Button asChild className="bg-violet-600 hover:bg-violet-700 text-white rounded-xl gap-1.5">
-                        <Link href="/variants/create">
+                    <Button asChild className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl gap-1.5">
+                        <Link href="/packages/create">
                             <PlusCircle size={16} />
-                            Tambah Varian
+                            Tambah Paket
                         </Link>
                     </Button>
                 </div>
@@ -57,22 +67,19 @@ export default function VariantsIndex({ variants, filters }: Props) {
                         <Input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="Cari varian..."
+                            placeholder="Cari paket..."
                             className="pl-9 h-9 rounded-xl text-sm"
                         />
                     </div>
-                    <Button type="submit" variant="outline" className="rounded-xl h-9">
-                        Cari
-                    </Button>
                 </form>
 
                 {/* Data Table */}
-                <DataTable columns={columns} data={variants.data} />
+                <DataTable columns={columns} data={packages.data} />
 
                 {/* Pagination */}
-                {variants.last_page > 1 && (
+                {packages.last_page > 1 && (
                     <div className="flex justify-center gap-1">
-                        {variants.links.map((link, i) => (
+                        {packages.links.map((link, i) => (
                             <Button
                                 key={i}
                                 variant={link.active ? 'default' : 'outline'}
