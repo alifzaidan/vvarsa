@@ -25,10 +25,10 @@ const productSchema = z.object({
     sku: z.string().optional(),
     category_id: z.string().optional(),
     unit: z.string().min(1, 'Satuan wajib diisi'),
-    min_stock: z.number().min(0, 'Stok minimum tidak boleh negatif'),
-    purchase_price: z.number().min(0, 'Harga beli tidak boleh negatif'),
-    purchase_qty: z.number().min(0.001, 'Isi kemasan tidak boleh kosong atau negatif'),
-    sell_price: z.number().min(0, 'Harga jual tidak boleh negatif').optional().default(0),
+    min_stock: z.coerce.number().min(0, 'Stok minimum tidak boleh negatif'),
+    purchase_price: z.coerce.number().min(0, 'Harga beli tidak boleh negatif'),
+    purchase_qty: z.coerce.number().min(0.001, 'Isi kemasan tidak boleh kosong atau negatif'),
+    sell_price: z.coerce.number().min(0, 'Harga jual tidak boleh negatif').optional().default(0),
     description: z.string().optional(),
     is_active: z.boolean(),
 });
@@ -57,7 +57,7 @@ export default function InventoryEdit({ product, categories }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         setClientErrors({});
-        
+
         const result = productSchema.safeParse(data);
         if (!result.success) {
             const newErrors: Record<string, string> = {};
@@ -68,7 +68,7 @@ export default function InventoryEdit({ product, categories }: Props) {
             setClientErrors(newErrors);
             return;
         }
-        
+
         put(`/inventory/${product.id}`);
     };
 
@@ -77,7 +77,7 @@ export default function InventoryEdit({ product, categories }: Props) {
         ? Math.round(((data.sell_price - costPrice) / data.sell_price) * 100)
         : 0;
 
-    const displayError = (field: string) => clientErrors[field] || errors[field];
+    const displayError = (field: keyof typeof data): string | undefined => clientErrors[field] || errors[field];
 
 
     return (
@@ -104,7 +104,7 @@ export default function InventoryEdit({ product, categories }: Props) {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="bg-card border-border rounded-2xl border p-5 shadow-sm space-y-4">
                         <h2 className="text-sm font-semibold text-foreground">Informasi Dasar</h2>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="name">Nama Produk *</Label>
                             <Input
@@ -237,7 +237,7 @@ export default function InventoryEdit({ product, categories }: Props) {
 
                     <div className="bg-card border-border rounded-2xl border p-5 shadow-sm space-y-4">
                         <h2 className="text-sm font-semibold text-foreground">Pengaturan</h2>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="description">Deskripsi</Label>
                             <Textarea
