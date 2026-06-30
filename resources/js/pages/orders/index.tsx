@@ -1,37 +1,44 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type Order, type PaginatedData, type OrderSummaryItem } from '@/types/mrp';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
-    ClipboardList, PlusCircle, Search, ChevronDown, Check,
-    ShoppingBag, Clock, CheckCircle2, XCircle, AlertCircle
+    ClipboardList, PlusCircle, Search,
+    ShoppingBag, AlertCircle, Banknote, CreditCard, Smartphone
 } from 'lucide-react';
 import { useState } from 'react';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { formatRupiah, formatDate } from '@/lib/utils-mrp';
+import { columns } from './columns';
+import { DataTable } from './data-table';
+import { formatRupiah } from '@/lib/utils-mrp';
+import { goeyToast } from 'goey-toast';
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Pesanan', href: '/orders' },
 ];
 
+interface PaymentMethod {
+    id: number;
+    name: string;
+    account_name: string | null;
+    account_number: string | null;
+    is_active: boolean;
+}
+
 interface Props {
     orders: PaginatedData<Order>;
     summary: OrderSummaryItem[];
     filters: { status?: string; payment_status?: string; from?: string; to?: string };
+    paymentMethods: PaymentMethod[];
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-    pending:    { label: 'Pending', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: Clock },
-    processing: { label: 'Diproses', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: ShoppingBag },
-    done:       { label: 'Selesai', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400', icon: CheckCircle2 },
-    cancelled:  { label: 'Dibatalkan', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400', icon: XCircle },
-};
+export default function OrdersIndex({ orders, summary, filters, paymentMethods = [] }: Props) {
+    const [showPayModal, setShowPayModal] = useState<Order | null>(null);
 
-export default function OrdersIndex({ orders, summary, filters }: Props) {
-    const [search, setSearch] = useState('');
+    const { data: payData, setData: setPayData, patch: patchPay, processing: payProcessing } = useForm({
+        payment_method: '',
+    });
 
     const applyFilter = (key: string, value: string) => {
         router.get('/orders', { ...filters, [key]: value === 'all' ? undefined : value }, { preserveState: true });
@@ -45,6 +52,29 @@ export default function OrdersIndex({ orders, summary, filters }: Props) {
         if (!confirm(`Batalkan pesanan ${order.order_number}?`)) return;
         router.delete(`/orders/${order.id}`);
     };
+
+    const openPayModal = (order: Order) => {
+        const defaultPayment = paymentMethods.length > 0
+            ? (paymentMethods[0].account_number ? `${paymentMethods[0].name} (${paymentMethods[0].account_number})` : paymentMethods[0].name)
+            : 'Tunai (Cash)';
+
+        setPayData('payment_method', defaultPayment);
+        setShowPayModal(order);
+    };
+
+    const handleMarkPaid = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!showPayModal) return;
+        patchPay(`/orders/${showPayModal.id}/pay`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowPayModal(null);
+                goeyToast.success('Pesanan berhasil ditandai lunas!');
+            }
+        });
+    };
+
+    const tableColumns = columns(updateStatus, cancelOrder, openPayModal);
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -122,103 +152,17 @@ export default function OrdersIndex({ orders, summary, filters }: Props) {
                 </div>
 
                 {/* Table */}
-                <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-                    {orders.data.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-center">
-                            <ClipboardList size={40} className="text-muted-foreground mb-3 opacity-40" />
-                            <p className="font-medium text-muted-foreground">Belum ada pesanan</p>
-                            <Button asChild className="mt-4 rounded-xl" variant="outline">
-                                <Link href="/orders/create">+ Buat Pesanan Pertama</Link>
-                            </Button>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead className="bg-muted/50 border-b border-border">
-                                    <tr>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Order</th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Pelanggan</th>
-                                        <th className="text-left px-4 py-3 font-medium text-muted-foreground">Item</th>
-                                        <th className="text-right px-4 py-3 font-medium text-muted-foreground">Total</th>
-                                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">Status</th>
-                                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">Bayar</th>
-                                        <th className="text-center px-4 py-3 font-medium text-muted-foreground">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-border">
-                                    {orders.data.map((order) => {
-                                        const status = STATUS_LABELS[order.status];
-                                        const StatusIcon = status?.icon;
-                                        return (
-                                            <tr key={order.id} className="hover:bg-muted/30 transition-colors">
-                                                <td className="px-4 py-3">
-                                                    <div className="font-mono text-xs font-medium text-indigo-600">{order.order_number}</div>
-                                                    <div className="text-xs text-muted-foreground mt-0.5">
-                                                        {formatDate(order.ordered_at)}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="font-medium">{order.customer_name}</div>
-                                                    {order.customer_phone && (
-                                                        <div className="text-xs text-muted-foreground">{order.customer_phone}</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {(order.items ?? []).map((item, i) => (
-                                                            <span key={i} className="text-xs bg-muted px-2 py-0.5 rounded-full">
-                                                                {item.qty}× {item.variant_name}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-right font-semibold">
-                                                    {formatRupiah(order.total)}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {status && (
-                                                        <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${status.color}`}>
-                                                            {StatusIcon && <StatusIcon size={11} />}
-                                                            {status.label}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    {order.payment_status === 'paid' ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                                            <Check size={11} />Lunas
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">
-                                                            Belum Bayar
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <div className="flex justify-center gap-1">
-                                                        <Button variant="ghost" size="sm" asChild className="h-8 rounded-lg text-xs px-2.5">
-                                                            <Link href={`/orders/${order.id}`}>Detail</Link>
-                                                        </Button>
-                                                        {order.status === 'cancelled' || order.status === 'done' ? null : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className="h-8 rounded-lg text-xs px-2.5 text-rose-500 hover:bg-rose-50"
-                                                                onClick={() => cancelOrder(order)}
-                                                            >
-                                                                Batalkan
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                {orders.data.length === 0 ? (
+                    <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm flex flex-col items-center justify-center py-16 text-center">
+                        <ClipboardList size={40} className="text-muted-foreground mb-3 opacity-40" />
+                        <p className="font-medium text-muted-foreground">Belum ada pesanan</p>
+                        <Button asChild className="mt-4 rounded-xl" variant="outline">
+                            <Link href="/orders/create">+ Buat Pesanan Pertama</Link>
+                        </Button>
+                    </div>
+                ) : (
+                    <DataTable columns={tableColumns} data={orders.data} />
+                )}
 
                 {/* Pagination */}
                 {orders.last_page > 1 && (
@@ -237,6 +181,96 @@ export default function OrdersIndex({ orders, summary, filters }: Props) {
                     </div>
                 )}
             </div>
+
+            {/* ── Modal Tandai Lunas ── */}
+            {showPayModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-card border border-border rounded-2xl shadow-xl p-6 w-full max-w-sm text-foreground">
+                        <h2 className="text-lg font-bold mb-1">Tandai Pesanan Lunas</h2>
+                        <p className="text-sm text-muted-foreground mb-4">
+                            Total: <span className="font-semibold text-foreground">{formatRupiah(Number(showPayModal.total))}</span>
+                        </p>
+                        <form onSubmit={handleMarkPaid} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Metode Pembayaran</label>
+                                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                                    {paymentMethods.length > 0 ? (
+                                        paymentMethods.map((pm) => {
+                                            const lowerName = pm.name.toLowerCase();
+                                            const Icon = lowerName.includes('tunai') || lowerName.includes('cash')
+                                                ? Banknote
+                                                : (lowerName.includes('qris') || lowerName.includes('shopee') || lowerName.includes('gopay') || lowerName.includes('ovo') || lowerName.includes('wallet')
+                                                    ? Smartphone
+                                                    : CreditCard);
+
+                                            const value = pm.account_number ? `${pm.name} (${pm.account_number})` : pm.name;
+
+                                            return (
+                                                <button
+                                                    key={pm.id}
+                                                    type="button"
+                                                    onClick={() => setPayData('payment_method', value)}
+                                                    className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 border rounded-xl text-xs font-medium transition-all ${payData.payment_method === value
+                                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                                        : 'bg-muted hover:bg-muted/80 border-border'
+                                                        }`}
+                                                >
+                                                    <Icon size={16} />
+                                                    <span className="line-clamp-1">{pm.name}</span>
+                                                    {pm.account_number && (
+                                                        <span className="text-[10px] opacity-80 block truncate max-w-full font-mono">
+                                                            {pm.account_number}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })
+                                    ) : (
+                                        [
+                                            { key: 'cash', label: 'Tunai', icon: Banknote },
+                                            { key: 'transfer', label: 'Transfer', icon: CreditCard },
+                                            { key: 'qris', label: 'QRIS', icon: Smartphone }
+                                        ].map((method) => {
+                                            const Icon = method.icon;
+                                            return (
+                                                <button
+                                                    key={method.key}
+                                                    type="button"
+                                                    onClick={() => setPayData('payment_method', method.key)}
+                                                    className={`flex flex-col items-center gap-1.5 rounded-xl p-3 border text-xs font-medium transition-all ${payData.payment_method === method.key
+                                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                                        : 'bg-muted hover:bg-muted/80 border-border'
+                                                        }`}
+                                                >
+                                                    <Icon size={18} />
+                                                    {method.label}
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="flex-1 rounded-xl"
+                                    onClick={() => setShowPayModal(null)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={payProcessing}
+                                    className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
+                                >
+                                    {payProcessing ? 'Memproses...' : 'Konfirmasi Lunas'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

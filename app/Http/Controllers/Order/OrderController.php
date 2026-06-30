@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Package;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\PaymentMethod;
 use App\Models\Recipe;
 use App\Models\StockMovement;
 use App\Models\Transaction;
@@ -58,6 +59,10 @@ class OrderController extends Controller
             'orders'   => $orders,
             'summary'  => $summary,
             'filters'  => $request->only(['status', 'payment_status', 'from', 'to']),
+            'paymentMethods' => PaymentMethod::where('tenant_id', $tenant->id)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->get(),
         ]);
     }
 
@@ -94,7 +99,7 @@ class OrderController extends Controller
             'customer_name'          => 'required|string|max:255',
             'customer_phone'         => 'nullable|string|max:20',
             'notes'                  => 'nullable|string',
-            'payment_method'         => 'nullable|string|in:cash,transfer,qris',
+            'payment_method'         => 'nullable|string|max:255',
             'items'                  => 'required|array|min:1',
             'items.*.variant_id'     => 'required|exists:product_variants,id',
             'items.*.qty'            => 'required|integer|min:1',
@@ -231,6 +236,10 @@ class OrderController extends Controller
 
         return Inertia::render('orders/show', [
             'order' => $order,
+            'paymentMethods' => PaymentMethod::where('tenant_id', $tenant->id)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->get(),
         ]);
     }
 
@@ -268,7 +277,7 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'payment_method' => 'required|in:cash,transfer,qris',
+            'payment_method' => 'required|string|max:255',
         ]);
 
         DB::transaction(function () use ($order, $validated, $tenant) {
@@ -288,7 +297,6 @@ class OrderController extends Controller
                 'payment_status' => 'paid',
                 'payment_method' => $validated['payment_method'],
                 'transaction_id' => $transaction->id,
-                'status'         => 'done',
             ]);
 
             $this->deductStock($order, $tenant);

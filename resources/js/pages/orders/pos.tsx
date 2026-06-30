@@ -37,24 +37,34 @@ interface CartItem {
     quantities: Record<number, number>; // variant_id -> qty
 }
 
+interface PaymentMethod {
+    id: number;
+    name: string;
+    account_name: string | null;
+    account_number: string | null;
+    is_active: boolean;
+}
+
 interface Props {
     variants: (ProductVariant & { hpp: number; margin: number; profit: number })[];
     packages: PackageModel[];
+    paymentMethods: PaymentMethod[];
 }
 
-const PAYMENT_METHODS = [
-    { value: 'cash', label: 'Tunai', icon: Banknote },
-    { value: 'transfer', label: 'Transfer', icon: CreditCard },
-    { value: 'qris', label: 'QRIS', icon: Smartphone },
-];
-
-export default function PosPage({ variants, packages }: Props) {
+export default function PosPage({ variants, packages, paymentMethods = [] }: Props) {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [activeCartItemId, setActiveCartItemId] = useState<number | null>(null);
     const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [notes, setNotes] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('cash');
+
+    const defaultPayment = paymentMethods.length > 0
+        ? (paymentMethods[0].account_number ? `${paymentMethods[0].name} (${paymentMethods[0].account_number})` : paymentMethods[0].name)
+        : 'Tunai (Cash)';
+
+    const [paymentMethod, setPaymentMethod] = useState(defaultPayment);
+    const isCash = paymentMethod.toLowerCase().includes('tunai') || paymentMethod.toLowerCase().includes('cash');
+
     const [cashReceived, setCashReceived] = useState(0);
     const [processing, setProcessing] = useState(false);
     const [successOrder, setSuccessOrder] = useState<string | null>(null);
@@ -598,27 +608,68 @@ export default function PosPage({ variants, packages }: Props) {
                             {/* Payment Method */}
                             <div>
                                 <Label className="text-xs text-muted-foreground mb-1.5">Metode Pembayaran</Label>
-                                <div className="grid grid-cols-3 gap-1.5">
-                                    {PAYMENT_METHODS.map(({ value, label, icon: Icon }) => (
-                                        <button
-                                            key={value}
-                                            type="button"
-                                            onClick={() => setPaymentMethod(value)}
-                                            className={`flex flex-col items-center gap-1 rounded-xl p-2 border text-xs font-medium transition-all ${
-                                                paymentMethod === value
-                                                    ? 'bg-indigo-600 text-white border-indigo-600'
-                                                    : 'bg-muted hover:bg-muted/80 border-border'
-                                            }`}
-                                        >
-                                            <Icon size={15} />
-                                            {label}
-                                        </button>
-                                    ))}
+                                <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
+                                    {paymentMethods.length > 0 ? (
+                                        paymentMethods.map((pm) => {
+                                            const lowerName = pm.name.toLowerCase();
+                                            const Icon = lowerName.includes('tunai') || lowerName.includes('cash')
+                                                ? Banknote
+                                                : (lowerName.includes('qris') || lowerName.includes('shopee') || lowerName.includes('gopay') || lowerName.includes('ovo') || lowerName.includes('wallet')
+                                                    ? Smartphone
+                                                    : CreditCard);
+
+                                            const value = pm.account_number ? `${pm.name} (${pm.account_number})` : pm.name;
+
+                                            return (
+                                                <button
+                                                    key={pm.id}
+                                                    type="button"
+                                                    onClick={() => setPaymentMethod(value)}
+                                                    className={`flex flex-col items-center justify-center text-center gap-1 p-2 border rounded-xl text-[11px] font-medium transition-all ${
+                                                        paymentMethod === value
+                                                            ? 'bg-indigo-600 text-white border-indigo-600'
+                                                            : 'bg-muted hover:bg-muted/80 border-border'
+                                                    }`}
+                                                >
+                                                    <Icon size={14} />
+                                                    <span className="line-clamp-1">{pm.name}</span>
+                                                    {pm.account_number && (
+                                                        <span className="text-[9px] opacity-80 block truncate max-w-full font-mono">
+                                                            {pm.account_number}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })
+                                    ) : (
+                                        [
+                                            { key: 'cash', label: 'Tunai', icon: Banknote },
+                                            { key: 'transfer', label: 'Transfer', icon: CreditCard },
+                                            { key: 'qris', label: 'QRIS', icon: Smartphone }
+                                        ].map((method) => {
+                                            const Icon = method.icon;
+                                            return (
+                                                <button
+                                                    key={method.key}
+                                                    type="button"
+                                                    onClick={() => setPaymentMethod(method.key)}
+                                                    className={`flex flex-col items-center gap-1 rounded-xl p-2 border text-xs font-medium transition-all ${
+                                                        paymentMethod === method.key
+                                                            ? 'bg-indigo-600 text-white border-indigo-600'
+                                                            : 'bg-muted hover:bg-muted/80 border-border'
+                                                    }`}
+                                                >
+                                                    <Icon size={14} />
+                                                    {method.label}
+                                                </button>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
 
                             {/* Cash Received (for cash payment) */}
-                            {paymentMethod === 'cash' && (
+                            {isCash && (
                                 <div className="space-y-1.5">
                                     <Label className="text-xs text-muted-foreground">Uang Diterima (Rp)</Label>
                                     <Input

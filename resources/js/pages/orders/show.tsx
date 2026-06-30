@@ -10,8 +10,17 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatRupiah, formatDate } from '@/lib/utils-mrp';
 
+interface PaymentMethod {
+    id: number;
+    name: string;
+    account_name: string | null;
+    account_number: string | null;
+    is_active: boolean;
+}
+
 interface Props {
     order: Order;
+    paymentMethods: PaymentMethod[];
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType; next?: string; nextLabel?: string }> = {
@@ -75,14 +84,19 @@ function groupByPaket(items: OrderItem[]): PaketGroup[] {
     return groups;
 }
 
-export default function OrderShow({ order }: Props) {
+export default function OrderShow({ order, paymentMethods = [] }: Props) {
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Pesanan', href: '/orders' },
         { title: order.order_number, href: `/orders/${order.id}` },
     ];
 
     const [showPayModal, setShowPayModal] = useState(false);
-    const { data, setData, patch, processing } = useForm({ payment_method: 'cash' });
+    
+    const defaultPayment = paymentMethods.length > 0
+        ? (paymentMethods[0].account_number ? `${paymentMethods[0].name} (${paymentMethods[0].account_number})` : paymentMethods[0].name)
+        : 'Tunai (Cash)';
+
+    const { data, setData, patch, processing } = useForm({ payment_method: defaultPayment });
     const statusConfig = STATUS_CONFIG[order.status];
     const StatusIcon = statusConfig?.icon;
 
@@ -300,24 +314,57 @@ export default function OrderShow({ order }: Props) {
                         <form onSubmit={handleMarkPaid} className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Metode Pembayaran</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {(['cash', 'transfer', 'qris'] as const).map((method) => {
-                                        const Icon = PAYMENT_ICONS[method];
-                                        return (
-                                            <button
-                                                key={method}
-                                                type="button"
-                                                onClick={() => setData('payment_method', method)}
-                                                className={`flex flex-col items-center gap-1.5 rounded-xl p-3 border text-xs font-medium transition-all ${data.payment_method === method
-                                                    ? 'bg-indigo-600 text-white border-indigo-600'
-                                                    : 'bg-muted hover:bg-muted/80 border-border'
-                                                    }`}
-                                            >
-                                                <Icon size={18} />
-                                                {PAYMENT_LABELS[method].split(' ')[0]}
-                                            </button>
-                                        );
-                                    })}
+                                <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                                    {paymentMethods.length > 0 ? (
+                                        paymentMethods.map((pm) => {
+                                            const lowerName = pm.name.toLowerCase();
+                                            const Icon = lowerName.includes('tunai') || lowerName.includes('cash')
+                                                ? Banknote
+                                                : (lowerName.includes('qris') || lowerName.includes('shopee') || lowerName.includes('gopay') || lowerName.includes('ovo') || lowerName.includes('wallet')
+                                                    ? Smartphone
+                                                    : CreditCard);
+
+                                            const value = pm.account_number ? `${pm.name} (${pm.account_number})` : pm.name;
+
+                                            return (
+                                                <button
+                                                    key={pm.id}
+                                                    type="button"
+                                                    onClick={() => setData('payment_method', value)}
+                                                    className={`flex flex-col items-center justify-center text-center gap-1.5 p-2.5 border rounded-xl text-xs font-medium transition-all ${data.payment_method === value
+                                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                                        : 'bg-muted hover:bg-muted/80 border-border'
+                                                        }`}
+                                                >
+                                                    <Icon size={16} />
+                                                    <span className="line-clamp-1">{pm.name}</span>
+                                                    {pm.account_number && (
+                                                        <span className="text-[10px] opacity-80 block truncate max-w-full font-mono">
+                                                            {pm.account_number}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })
+                                    ) : (
+                                        (['cash', 'transfer', 'qris'] as const).map((method) => {
+                                            const Icon = PAYMENT_ICONS[method];
+                                            return (
+                                                <button
+                                                    key={method}
+                                                    type="button"
+                                                    onClick={() => setData('payment_method', method)}
+                                                    className={`flex flex-col items-center gap-1.5 rounded-xl p-3 border text-xs font-medium transition-all ${data.payment_method === method
+                                                        ? 'bg-indigo-600 text-white border-indigo-600'
+                                                        : 'bg-muted hover:bg-muted/80 border-border'
+                                                        }`}
+                                                >
+                                                    <Icon size={18} />
+                                                    {PAYMENT_LABELS[method].split(' ')[0]}
+                                                </button>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
                             <div className="flex gap-2">
