@@ -20,11 +20,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function PackageCreate({ variants }: Props) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         capacity: 1,
         price: '',
-        is_active: true,
+        is_active: true as boolean,
         description: '',
         variant_ids: [] as number[],
     });
@@ -34,15 +34,12 @@ export default function PackageCreate({ variants }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         
-        // If "all allowed", we pass an empty array to the backend to mean "no limits"
-        const submissionData = {
+        transform((data) => ({
             ...data,
             variant_ids: allVariantsAllowed ? [] : data.variant_ids,
-        };
+        }));
 
-        post('/packages', {
-            data: submissionData as any,
-        });
+        post('/packages');
     };
 
     const handleCheckboxChange = (id: number, checked: boolean) => {
