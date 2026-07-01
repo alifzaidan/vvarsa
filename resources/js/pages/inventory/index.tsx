@@ -1,8 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
-import { type PaginatedData, type Product, type ProductCategory } from '@/types/mrp';
+import { type InventoryFilters, type PaginatedData, type Product, type ProductCategory } from '@/types/mrp';
 import { Head, Link, router } from '@inertiajs/react';
-import { AlertTriangle, PackagePlus, Search } from 'lucide-react';
+import { AlertTriangle, Package, PackagePlus, Search } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -19,12 +19,13 @@ const breadcrumbs: BreadcrumbItem[] = [
 interface Props {
     products: PaginatedData<Product>;
     categories: ProductCategory[];
-    filters: { search?: string; category?: string; low_stock?: string };
+    filters: InventoryFilters;
+    low_stock_list: Product[];
     total_count: number;
     max_products: number;
 }
 
-export default function InventoryIndex({ products, categories, filters, total_count, max_products }: Props) {
+export default function InventoryIndex({ products, categories, filters, low_stock_list, total_count, max_products }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [category, setCategory] = useState(filters.category || 'all');
 
@@ -134,31 +135,72 @@ export default function InventoryIndex({ products, categories, filters, total_co
                     </Button>
                 </div>
 
-                {/* Products TanStack Table */}
-                <div className="space-y-4">
-                    <DataTable columns={tableColumns} data={products.data} />
+                {/* Products TanStack Table + Low Stock Panel */}
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+                    <div className="space-y-4">
+                        <DataTable columns={tableColumns} data={products.data} />
 
-                    {/* Pagination */}
-                    {products.last_page > 1 && (
-                        <div className="border-border flex items-center justify-between border-t bg-card px-4 py-3 rounded-xl border shadow-sm">
-                            <p className="text-muted-foreground text-sm">
-                                Menampilkan {(products.current_page - 1) * products.per_page + 1}–{Math.min(products.current_page * products.per_page, products.total)} dari {products.total} produk
-                            </p>
-                            <div className="flex gap-1">
-                                {products.links.map((link, i) => (
-                                    <Button
-                                        key={i}
-                                        variant={link.active ? 'default' : 'outline'}
-                                        disabled={!link.url}
-                                        onClick={() => link.url && router.get(link.url)}
-                                        className="h-8 px-3 rounded-lg text-xs"
-                                    >
-                                        <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                                    </Button>
-                                ))}
+                        {/* Pagination */}
+                        {products.last_page > 1 && (
+                            <div className="border-border flex items-center justify-between border-t bg-card px-4 py-3 rounded-xl border shadow-sm">
+                                <p className="text-muted-foreground text-sm">
+                                    Menampilkan {(products.current_page - 1) * products.per_page + 1}–{Math.min(products.current_page * products.per_page, products.total)} dari {products.total} produk
+                                </p>
+                                <div className="flex gap-1">
+                                    {products.links.map((link, i) => (
+                                        <Button
+                                            key={i}
+                                            variant={link.active ? 'default' : 'outline'}
+                                            disabled={!link.url}
+                                            onClick={() => link.url && router.get(link.url)}
+                                            className="h-8 px-3 rounded-lg text-xs"
+                                        >
+                                            <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
+                        )}
+                    </div>
+
+                    <div className="bg-card border-border rounded-2xl border p-5 shadow-sm">
+                        <div className="mb-4 flex items-center justify-between">
+                            <div>
+                                <h2 className="font-semibold">Stok Menipis</h2>
+                                <p className="text-muted-foreground text-xs">Produk yang perlu segera dibeli</p>
+                            </div>
+                            <Button variant="ghost" size="sm" asChild className="rounded-lg text-xs">
+                                <Link href="/inventory?low_stock=1">Lihat semua</Link>
+                            </Button>
                         </div>
-                    )}
+
+                        {low_stock_list.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <Package size={32} className="mb-2 text-emerald-500" />
+                                <p className="text-muted-foreground text-sm">Semua stok aman</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {low_stock_list.map((product) => {
+                                    const isEmpty = product.current_stock <= 0;
+
+                                    return (
+                                        <div key={product.id} className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/40 dark:bg-amber-900/10">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-medium text-foreground">{product.name}</p>
+                                                <p className="text-muted-foreground text-xs">
+                                                    Batas {product.min_stock} {product.unit}
+                                                </p>
+                                            </div>
+                                            <div className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${isEmpty ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
+                                                {product.current_stock} {product.unit}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </AppLayout>

@@ -32,7 +32,7 @@ class Supplier extends Model
 
     protected $casts = [
         'product_categories' => 'array',
-        'rating'             => 'decimal:1',
+        'rating'             => 'double',
         'is_verified'        => 'boolean',
         'is_active'          => 'boolean',
     ];

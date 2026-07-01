@@ -172,6 +172,12 @@ export interface PaginatedData<T> {
     links: { url: string | null; label: string; active: boolean }[];
 }
 
+export interface InventoryFilters {
+    search?: string;
+    category?: string;
+    low_stock?: string;
+}
+
 // ─── Resep & BOM ────────────────────────────────────────────────────────────
 
 export interface RecipeIngredient {

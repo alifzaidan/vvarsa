@@ -35,11 +35,19 @@ class ProductController extends Controller
 
         $products = $query->latest()->paginate(15)->withQueryString();
         $categories = ProductCategory::where('tenant_id', $tenant->id)->get(['id', 'name']);
+        $lowStockList = Product::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->with('category:id,name')
+            ->whereColumn('current_stock', '<=', 'min_stock')
+            ->orderBy('current_stock')
+            ->limit(5)
+            ->get();
 
         return Inertia::render('inventory/index', [
             'products'     => $products,
             'categories'   => $categories,
             'filters'      => $request->only(['search', 'category', 'low_stock']),
+            'low_stock_list' => $lowStockList,
             'total_count'  => Product::where('tenant_id', $tenant->id)->count(),
             'max_products' => $tenant->max_products,
         ]);
