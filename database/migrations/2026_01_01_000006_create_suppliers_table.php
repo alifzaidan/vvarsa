@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('suppliers', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->nullable()->constrained()->nullOnDelete(); // null = global supplier
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->nullable()->constrained()->nullOnDelete(); // null = global supplier
             $table->string('name');
             $table->string('contact_name')->nullable();
             $table->string('phone')->nullable();

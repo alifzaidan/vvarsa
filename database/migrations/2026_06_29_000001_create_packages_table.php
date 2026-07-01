@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('packages', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->integer('capacity');
             $table->decimal('price', 14, 2);
@@ -20,9 +20,9 @@ return new class extends Migration
         });
 
         Schema::create('package_variants', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('package_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('variant_id')->constrained('product_variants')->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('package_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('variant_id')->constrained('product_variants')->cascadeOnDelete();
             $table->timestamps();
         });
     }
