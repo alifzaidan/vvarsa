@@ -88,7 +88,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
 
     // Calculate subtotal & HPP
     const subtotal = cart.reduce((sum, item) => sum + item.harga, 0);
-    
+
     const getCartItemHpp = (item: CartItem) => {
         let total = 0;
         Object.entries(item.quantities).forEach(([vId, qty]) => {
@@ -307,15 +307,15 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
 
             <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
                 {/* Left: Product & Package Grid */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-background space-y-6">
+                <div className="flex-1 min-w-0 overflow-y-auto p-4 md:p-6 bg-background space-y-6">
                     <div className="mb-4">
                         <h1 className="text-xl font-bold flex items-center gap-2">
                             <ShoppingBag className="text-indigo-500" size={22} />
                             POS Kasir
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            {packages.length > 0 
-                                ? 'Pilih paket di bawah, lalu isi varian rasanya' 
+                            {packages.length > 0
+                                ? 'Pilih paket di bawah, lalu isi varian rasanya'
                                 : 'Pilih varian rasa langsung untuk memesan'}
                         </p>
                     </div>
@@ -327,7 +327,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                 <Package className="text-indigo-500" size={16} />
                                 Pilih Paket Mochi
                             </h2>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                                 {packages.map((pkg) => (
                                     <button
                                         key={pkg.id}
@@ -358,7 +358,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                 <p>Belum ada varian produk aktif.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                                 {variants.map((v) => {
                                     // Calculate quantity in cart
                                     let currentQty = 0;
@@ -378,11 +378,10 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                             key={v.id}
                                             type="button"
                                             onClick={() => handleVariantClick(v)}
-                                            className={`relative group text-left rounded-xl border p-3.5 transition-all hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 ${
-                                                currentQty > 0
+                                            className={`relative group text-left rounded-xl border p-3.5 transition-all hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 ${currentQty > 0
                                                     ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-600 shadow-sm'
                                                     : 'bg-card border-border hover:border-indigo-200'
-                                            }`}
+                                                }`}
                                         >
                                             {currentQty > 0 && (
                                                 <div className="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center">
@@ -403,7 +402,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                 </div>
 
                 {/* Right: Cart & Checkout */}
-                <div className="w-80 lg:w-96 border-l border-border flex flex-col bg-card">
+                <div className="w-full sm:w-[22rem] lg:w-[26rem] xl:w-[30rem] shrink-0 border-l border-border flex flex-col bg-card">
                     {/* Cart Header */}
                     <div className="p-4 border-b border-border flex items-center justify-between">
                         <h2 className="font-semibold flex items-center gap-2">
@@ -429,7 +428,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                     )}
 
                     {/* Cart Items */}
-                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                    <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
                         {cart.length === 0 && !successOrder && (
                             <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground text-sm">
                                 <ShoppingCart size={28} className="mb-2 opacity-30" />
@@ -447,44 +446,46 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                 if (!v) return null;
 
                                 return (
-                                    <div key={item.id} className="flex items-center gap-2 bg-background rounded-xl p-3 border border-border">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="font-medium text-sm truncate">{v.name.replace('Mochi ', '')}</div>
-                                            <div className="text-xs text-muted-foreground">{formatRupiah(Number(v.sell_price))}/pcs</div>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 shrink-0">
+                                    <div key={item.id} className="flex flex-col gap-2.5 bg-background rounded-xl p-3.5 border border-border">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <div className="font-medium text-sm truncate">{v.name.replace('Mochi ', '')}</div>
+                                                <div className="text-xs text-muted-foreground mt-0.5">{formatRupiah(Number(v.sell_price))}/pcs</div>
+                                            </div>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    adjustDirectQty(item.id, variantId, -1);
+                                                    removeItem(item.id);
                                                 }}
-                                                className="w-6 h-6 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center text-xs font-bold"
+                                                className="text-rose-400 hover:text-rose-600 shrink-0 p-0.5"
                                             >
-                                                <Minus size={11} />
-                                            </button>
-                                            <span className="w-6 text-center text-sm font-semibold">{qty}</span>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    adjustDirectQty(item.id, variantId, 1);
-                                                }}
-                                                className="w-6 h-6 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center text-xs font-bold"
-                                            >
-                                                <Plus size={11} />
+                                                <Trash2 size={14} />
                                             </button>
                                         </div>
-                                        <div className="text-right shrink-0 min-w-[60px]">
-                                            <div className="font-semibold text-xs">{formatRupiah(item.harga)}</div>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        adjustDirectQty(item.id, variantId, -1);
+                                                    }}
+                                                    className="w-7 h-7 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center text-xs font-bold"
+                                                >
+                                                    <Minus size={12} />
+                                                </button>
+                                                <span className="w-6 text-center text-sm font-semibold">{qty}</span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        adjustDirectQty(item.id, variantId, 1);
+                                                    }}
+                                                    className="w-7 h-7 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center text-xs font-bold"
+                                                >
+                                                    <Plus size={12} />
+                                                </button>
+                                            </div>
+                                            <div className="font-semibold text-sm">{formatRupiah(item.harga)}</div>
                                         </div>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeItem(item.id);
-                                            }}
-                                            className="text-rose-400 hover:text-rose-600 shrink-0"
-                                        >
-                                            <Trash2 size={13} />
-                                        </button>
                                     </div>
                                 );
                             }
@@ -498,21 +499,19 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                 <div
                                     key={item.id}
                                     onClick={() => setActiveCartItemId(item.id)}
-                                    className={`flex flex-col gap-2 rounded-xl p-3 border cursor-pointer transition-all ${
-                                        isActive
+                                    className={`flex flex-col gap-2.5 rounded-xl p-3.5 border cursor-pointer transition-all ${isActive
                                             ? 'border-indigo-500 bg-indigo-50/30 dark:bg-indigo-950/20 shadow-sm'
                                             : 'border-border bg-background hover:border-indigo-200'
-                                    }`}
+                                        }`}
                                 >
                                     {/* Header */}
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${
-                                                isActive ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground'
-                                            }`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className={`text-xs font-bold px-2 py-0.5 rounded shrink-0 ${isActive ? 'bg-indigo-600 text-white' : 'bg-muted text-muted-foreground'
+                                                }`}>
                                                 {item.name}
                                             </span>
-                                            <span className="text-xs font-semibold text-foreground">
+                                            <span className="text-xs font-semibold text-foreground truncate">
                                                 {formatRupiah(item.harga)}
                                             </span>
                                         </div>
@@ -521,28 +520,28 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                                 e.stopPropagation();
                                                 removeItem(item.id);
                                             }}
-                                            className="text-rose-400 hover:text-rose-600 transition-colors"
+                                            className="text-rose-400 hover:text-rose-600 transition-colors shrink-0 p-0.5"
                                         >
-                                            <Trash2 size={13} />
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
 
                                     {/* Selected Flavor Counts */}
-                                    <div className="space-y-1">
+                                    <div className="space-y-1.5">
                                         {Object.entries(item.quantities).map(([vId, qty]) => {
                                             if (qty === 0) return null;
                                             const v = variants.find(vv => vv.id === Number(vId));
                                             if (!v) return null;
                                             return (
-                                                <div key={vId} className="flex items-center justify-between text-xs bg-muted/40 px-2 py-1 rounded border border-border/40">
-                                                    <span className="font-medium truncate max-w-[130px]">{v.name.replace('Mochi ', '')}</span>
+                                                <div key={vId} className="flex items-center justify-between gap-2 text-xs bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/40">
+                                                    <span className="font-medium truncate">{v.name.replace('Mochi ', '')}</span>
                                                     <div className="flex items-center gap-1.5 shrink-0">
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 adjustQty(item.id, v.id, -1);
                                                             }}
-                                                            className="w-4.5 h-4.5 rounded bg-background hover:bg-muted border border-border flex items-center justify-center text-[10px]"
+                                                            className="w-5 h-5 rounded bg-background hover:bg-muted border border-border flex items-center justify-center text-[10px]"
                                                         >
                                                             -
                                                         </button>
@@ -553,7 +552,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                                                 adjustQty(item.id, v.id, 1);
                                                             }}
                                                             disabled={isComplete}
-                                                            className="w-4.5 h-4.5 rounded bg-background hover:bg-muted border border-border flex items-center justify-center text-[10px] disabled:opacity-40"
+                                                            className="w-5 h-5 rounded bg-background hover:bg-muted border border-border flex items-center justify-center text-[10px] disabled:opacity-40"
                                                         >
                                                             +
                                                         </button>
@@ -564,7 +563,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                     </div>
 
                                     {/* Status */}
-                                    <div className="flex justify-between items-center text-[10px] mt-1 border-t border-dashed border-border pt-1.5">
+                                    <div className="flex justify-between items-center text-[10px] mt-0.5 border-t border-dashed border-border pt-2">
                                         <span className={isComplete ? "text-emerald-600 font-semibold" : "text-amber-600 font-semibold"}>
                                             {isComplete ? "✓ Lengkap" : `⚠ Kurang ${item.isi - totalSelected} Pcs`} ({totalSelected}/{item.isi})
                                         </span>
@@ -582,7 +581,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
 
                     {/* Customer & Payment */}
                     {cart.length > 0 && (
-                        <div className="border-t border-border p-4 space-y-4">
+                        <div className="border-t border-border p-4 space-y-4 max-h-[55vh] overflow-y-auto">
                             {/* Customer */}
                             <div className="space-y-2">
                                 <Input
@@ -607,8 +606,8 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
 
                             {/* Payment Method */}
                             <div>
-                                <Label className="text-xs text-muted-foreground mb-1.5">Metode Pembayaran</Label>
-                                <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-0.5">
+                                <Label className="text-xs text-muted-foreground mb-1.5 block">Metode Pembayaran</Label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
                                     {paymentMethods.length > 0 ? (
                                         paymentMethods.map((pm) => {
                                             const lowerName = pm.name.toLowerCase();
@@ -625,11 +624,10 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                                     key={pm.id}
                                                     type="button"
                                                     onClick={() => setPaymentMethod(value)}
-                                                    className={`flex flex-col items-center justify-center text-center gap-1 p-2 border rounded-xl text-[11px] font-medium transition-all ${
-                                                        paymentMethod === value
+                                                    className={`flex flex-col items-center justify-center text-center gap-1 p-2.5 border rounded-xl text-[11px] font-medium transition-all ${paymentMethod === value
                                                             ? 'bg-indigo-600 text-white border-indigo-600'
                                                             : 'bg-muted hover:bg-muted/80 border-border'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <Icon size={14} />
                                                     <span className="line-clamp-1">{pm.name}</span>
@@ -653,11 +651,10 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                                     key={method.key}
                                                     type="button"
                                                     onClick={() => setPaymentMethod(method.key)}
-                                                    className={`flex flex-col items-center gap-1 rounded-xl p-2 border text-xs font-medium transition-all ${
-                                                        paymentMethod === method.key
+                                                    className={`flex flex-col items-center gap-1 rounded-xl p-2.5 border text-xs font-medium transition-all ${paymentMethod === method.key
                                                             ? 'bg-indigo-600 text-white border-indigo-600'
                                                             : 'bg-muted hover:bg-muted/80 border-border'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <Icon size={14} />
                                                     {method.label}
@@ -688,7 +685,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                             )}
 
                             {/* Total */}
-                            <div className="bg-muted/50 rounded-xl p-3 space-y-1">
+                            <div className="bg-muted/50 rounded-xl p-3.5 space-y-1.5">
                                 <div className="flex justify-between text-sm text-muted-foreground">
                                     <span>Subtotal ({packages.length > 0 ? `${cart.length} paket` : `${cart.reduce((s, i) => s + i.quantities[Number(Object.keys(i.quantities)[0])], 0)} item`})</span>
                                     <span>{formatRupiah(subtotal)}</span>
