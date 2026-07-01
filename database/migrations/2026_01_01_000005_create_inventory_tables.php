@@ -9,20 +9,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('product_categories', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('name');
-            $table->foreignId('parent_id')->nullable()->constrained('product_categories')->nullOnDelete();
+            $table->foreignUuid('parent_id')->nullable()->constrained('product_categories')->nullOnDelete();
             $table->string('color')->nullable(); // for visual distinction
             $table->timestamps();
         });
 
         Schema::create('products', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('sku')->nullable();
             $table->string('name');
-            $table->foreignId('category_id')->nullable()->constrained('product_categories')->nullOnDelete();
+            $table->foreignUuid('category_id')->nullable()->constrained('product_categories')->nullOnDelete();
             $table->string('unit')->default('pcs'); // pcs, kg, liter, box, etc.
             $table->integer('min_stock')->default(0);
             $table->integer('current_stock')->default(0);
@@ -39,9 +39,9 @@ return new class extends Migration
         });
 
         Schema::create('stock_movements', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('product_id')->constrained()->cascadeOnDelete();
             $table->string('type'); // in, out, opname
             $table->integer('qty');
             $table->integer('qty_before');
@@ -49,7 +49,7 @@ return new class extends Migration
             $table->decimal('unit_cost', 12, 2)->nullable(); // harga per unit saat masuk
             $table->string('reference')->nullable(); // nomor PO, invoice, dll
             $table->text('note')->nullable();
-            $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->foreignUuid('user_id')->constrained()->restrictOnDelete();
             $table->timestamp('movement_date');
             $table->timestamps();
         });

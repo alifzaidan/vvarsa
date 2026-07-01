@@ -25,7 +25,7 @@ interface Props {
 }
 
 export default function PackageEdit({ package: pkg, variants }: Props) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         name: pkg.name,
         capacity: pkg.capacity,
         price: pkg.price.toString(),
@@ -46,15 +46,12 @@ export default function PackageEdit({ package: pkg, variants }: Props) {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // If "all allowed", we pass an empty array to the backend to mean "no limits"
-        const submissionData = {
+        transform((data) => ({
             ...data,
             variant_ids: allVariantsAllowed ? [] : data.variant_ids,
-        };
+        }));
 
-        put(`/packages/${pkg.id}`, {
-            data: submissionData as any,
-        });
+        put(`/packages/${pkg.id}`);
     };
 
     const handleCheckboxChange = (id: number, checked: boolean) => {

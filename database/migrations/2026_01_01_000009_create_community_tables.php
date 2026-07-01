@@ -9,9 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('community_posts', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->string('business_type')->nullable(); // filter by industry
             $table->string('title');
             $table->longText('content');
@@ -26,19 +26,19 @@ return new class extends Migration
         });
 
         Schema::create('community_post_likes', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('post_id')->constrained('community_posts')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('post_id')->constrained('community_posts')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
             $table->timestamps();
 
             $table->unique(['post_id', 'user_id']);
         });
 
         Schema::create('community_replies', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('post_id')->constrained('community_posts')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('parent_id')->nullable()->constrained('community_replies')->nullOnDelete(); // nested reply
+            $table->uuid('id')->primary();
+            $table->foreignUuid('post_id')->constrained('community_posts')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('parent_id')->nullable()->constrained('community_replies')->nullOnDelete(); // nested reply
             $table->text('content');
             $table->integer('likes_count')->default(0);
             $table->boolean('is_active')->default(true);

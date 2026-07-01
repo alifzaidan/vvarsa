@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->nullOnDelete();
+            $table->foreignUuid('tenant_id')->nullable()->after('id')->constrained('tenants')->nullOnDelete();
             // Kolom 'role' dihapus — role dikelola oleh Spatie Laravel Permission
             $table->boolean('is_active')->default(true)->after('tenant_id');
         });

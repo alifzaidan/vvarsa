@@ -9,14 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tenants', function (Blueprint $table) {
-            $table->id();
+            $table->uuid('id')->primary();
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('business_type')->default('general'); // fnb, retail, fashion, general, etc.
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
             $table->string('logo')->nullable();
-            $table->foreignId('plan_id')->constrained('subscription_plans')->restrictOnDelete();
+            $table->foreignUuid('plan_id')->constrained('subscription_plans')->restrictOnDelete();
             // max_products & max_users diambil dari subscription_plans, tidak disimpan di sini
             $table->boolean('is_active')->default(true);
             $table->timestamps();

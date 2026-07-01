@@ -9,8 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('recipes', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->text('description')->nullable();
             $table->decimal('portion_qty', 10, 3)->default(1.000); // output portion quantity (e.g. 12 pcs)
@@ -18,9 +18,9 @@ return new class extends Migration
         });
 
         Schema::create('product_variants', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('recipe_id')->nullable()->constrained('recipes')->nullOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('tenant_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('recipe_id')->nullable()->constrained('recipes')->nullOnDelete();
             $table->decimal('recipe_qty', 10, 3)->default(1.000); // multiplier / portion used
             $table->string('sku')->nullable();
             $table->string('name');
@@ -34,10 +34,10 @@ return new class extends Migration
         });
 
         Schema::create('recipe_ingredients', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('recipe_id')->constrained('recipes')->cascadeOnDelete();
+            $table->uuid('id')->primary();
+            $table->foreignUuid('recipe_id')->constrained('recipes')->cascadeOnDelete();
             // ingredient_id nullable: jika null, gunakan custom name/cost
-            $table->foreignId('ingredient_id')->nullable()->constrained('products')->nullOnDelete();
+            $table->foreignUuid('ingredient_id')->nullable()->constrained('products')->nullOnDelete();
             $table->string('ingredient_name'); // snapshot atau custom name
             $table->decimal('qty', 10, 3);     // jumlah bahan per resep
             $table->string('unit');             // satuan bahan (gr, ml, pcs, dll)

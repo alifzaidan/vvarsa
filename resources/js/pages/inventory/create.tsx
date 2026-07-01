@@ -73,7 +73,7 @@ export default function InventoryCreate({ categories }: Props) {
         ? Math.round(((data.sell_price - costPrice) / data.sell_price) * 100)
         : 0;
 
-    const displayError = (field: string) => clientErrors[field] || errors[field];
+    const displayError = (field: keyof typeof errors) => clientErrors[field] || errors[field];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
