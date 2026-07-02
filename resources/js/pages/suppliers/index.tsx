@@ -1,8 +1,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type PaginatedData, type Supplier } from '@/types/mrp';
-import { Head, router } from '@inertiajs/react';
-import { CheckCircle, ExternalLink, MapPin, Phone, Search, Star } from 'lucide-react';
+import { Head, router, Link } from '@inertiajs/react';
+import { CheckCircle, ExternalLink, MapPin, Phone, Search, Star, Plus, Edit } from 'lucide-react';
 import { useState } from 'react';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -51,11 +51,22 @@ export default function SuppliersIndex({ suppliers, cities, filters, business_ty
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Rekomendasi Supplier" />
             <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Rekomendasi Supplier</h1>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                        Temukan supplier terpercaya sesuai kebutuhan bisnis Anda
-                    </p>
+
+                {/* Header & Add Button */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Rekomendasi Supplier</h1>
+                        <p className="text-muted-foreground mt-1 text-sm">
+                            Temukan supplier terpercaya sesuai kebutuhan bisnis Anda
+                        </p>
+                    </div>
+                    <Link
+                        href="/suppliers/create"
+                        className="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+                    >
+                        <Plus size={16} />
+                        Tambah Supplier
+                    </Link>
                 </div>
 
                 {/* Business type filter */}
@@ -139,30 +150,42 @@ export default function SuppliersIndex({ suppliers, cities, filters, business_ty
                                     </div>
                                 )}
 
-                                <div className="mt-auto space-y-1.5 border-t pt-3">
-                                    {supplier.city && (
-                                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                                            <MapPin size={11} />
-                                            <span>{supplier.city}</span>
-                                        </div>
-                                    )}
-                                    {supplier.phone && (
-                                        <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                                            <Phone size={11} />
-                                            <a href={`tel:${supplier.phone}`} className="hover:text-primary">{supplier.phone}</a>
-                                        </div>
-                                    )}
-                                    {supplier.website && (
-                                        <a
-                                            href={supplier.website}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary mt-2 flex items-center gap-1 text-xs hover:underline"
-                                        >
-                                            <ExternalLink size={11} />
-                                            Kunjungi Website
-                                        </a>
-                                    )}
+                                {/* Card Footer dengan Tombol Edit */}
+                                <div className="mt-auto flex items-end justify-between gap-4 border-t pt-3">
+                                    <div className="space-y-1.5 flex-1">
+                                        {supplier.city && (
+                                            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                                <MapPin size={11} />
+                                                <span>{supplier.city}</span>
+                                            </div>
+                                        )}
+                                        {supplier.phone && (
+                                            <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                                                <Phone size={11} />
+                                                <a href={`tel:${supplier.phone}`} className="hover:text-primary">{supplier.phone}</a>
+                                            </div>
+                                        )}
+                                        {supplier.website && (
+                                            <a
+                                                href={supplier.website}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary mt-2 flex items-center gap-1 text-xs hover:underline"
+                                            >
+                                                <ExternalLink size={11} />
+                                                Kunjungi Website
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    {/* Tombol Edit */}
+                                    <Link
+                                        href={`/suppliers/${supplier.id}/edit`}
+                                        className="bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground flex shrink-0 items-center justify-center rounded-lg p-2 transition-colors"
+                                        title="Edit Supplier"
+                                    >
+                                        <Edit size={16} />
+                                    </Link>
                                 </div>
                             </div>
                         ))}

@@ -92,7 +92,13 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTenantMiddlewa
         });
 
         // Suppliers
-        Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+        Route::prefix('suppliers')->name('suppliers.')->group(function () {
+            Route::get('/', [SupplierController::class, 'index'])->name('index');
+            Route::get('/create', [SupplierController::class, 'create'])->name('create');
+            Route::post('/', [SupplierController::class, 'store'])->name('store');
+            Route::get('/{supplier}/edit', [SupplierController::class, 'edit'])->name('edit'); // Tambahan rute Edit
+            Route::put('/{supplier}', [SupplierController::class, 'update'])->name('update'); // Tambahan rute Update
+        });
 
         // Tax Consultation (Everyone can access consultation)
         Route::get('/tax/consultation', [TaxController::class, 'consultation'])->name('tax.consultation');
