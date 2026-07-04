@@ -45,10 +45,10 @@ function NavGroup({ title, items }: NavGroupProps) {
 export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
-    
+
     const isAdmin = user?.roles?.includes('admin');
     const isOwner = user?.roles?.includes('owner');
-    
+
     // ── Platform Admin Navigation ──
     if (isAdmin) {
         const adminMainItems: NavItem[] = [
@@ -68,6 +68,21 @@ export function AppSidebar() {
             {
                 title: 'Daftar Pengguna',
                 href: '/admin/users',
+                icon: Users,
+            },
+            {
+                title: 'Daftar Supplier',
+                href: '/admin/supplier',
+                icon: Store,
+            },
+            {
+                title: 'Daftar Event',
+                href: '/admin/event',
+                icon: CalendarDays,
+            },
+            {
+                title: 'Daftar Komunitas',
+                href: '/admin/community',
                 icon: Users,
             },
             {

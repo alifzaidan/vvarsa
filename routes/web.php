@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\Finance\ReportController;
 use App\Http\Controllers\Finance\TransactionController;
@@ -31,6 +32,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])
     ->group(function () {
         // Dashboard Admin
         Route::get('/', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+
+        // Supplier Management (Admin)
+        Route::get('/supplier', [AdminSupplierController::class, 'index'])->name('supplier.index');
+        Route::get('/supplier/create', [AdminSupplierController::class, 'create'])->name('supplier.create');
+        Route::get('/supplier/{supplier}/edit', [AdminSupplierController::class, 'edit'])->name('supplier.edit');
+        Route::post('/supplier', [AdminSupplierController::class, 'store'])->name('supplier.store'); 
+        Route::put('/supplier/{supplier}', [AdminSupplierController::class, 'update'])->name('supplier.update');
+        Route::delete('/supplier/{supplier}', [AdminSupplierController::class, 'destroy'])->name('supplier.destroy');
 
         // Tenants Management
         Route::get('/tenants', [\App\Http\Controllers\Admin\TenantController::class, 'index'])->name('tenants.index');

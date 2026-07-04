@@ -40,7 +40,7 @@ class SupplierController extends Controller
 
         $suppliers = $query->orderByDesc('is_verified')
             ->orderByDesc('rating')
-            ->paginate(12)
+            ->paginate(9)
             ->withQueryString();
 
         $cities = Supplier::distinct()->whereNotNull('city')->pluck('city')->values();
