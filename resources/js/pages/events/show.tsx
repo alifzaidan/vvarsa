@@ -4,6 +4,7 @@ import { type BreadcrumbItem } from '@/types';
 import { type Event } from '@/types/mrp';
 import { Head, Link, router } from '@inertiajs/react';
 import { ArrowLeft, CalendarDays, CheckCircle, Clock, MapPin, Users, XCircle } from 'lucide-react';
+import { getCalculatedStatus } from './index';
 
 interface Registration {
     id: number;
@@ -25,8 +26,9 @@ const breadcrumbs = (event: Event): BreadcrumbItem[] => [
 ];
 
 export default function EventShow({ event, is_registered, recent_registrations }: Props) {
+    const calculatedStatus = getCalculatedStatus(event);
     const isFull = event.max_participants !== null && event.registered_count >= event.max_participants;
-    const canRegister = event.allow_platform_registration && event.status === 'upcoming' && !isFull;
+    const canRegister = event.allow_platform_registration && calculatedStatus === 'upcoming' && !isFull;
 
     const handleRegister = () => {
         router.post(`/events/${event.id}/register`, {}, {

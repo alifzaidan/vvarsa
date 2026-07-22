@@ -15,17 +15,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface Props {
     events: PaginatedData<Event>;
-    registered_event_ids: number[];
+    registered_event_ids: (string | number)[];
     cities: string[];
-    filters: { search?: string; city?: string; business_type?: string };
+    filters: { search?: string; city?: string; business_type?: string; only_registered?: string };
 }
 
 const BUSINESS_TYPES = [
     { value: '', label: 'Semua Kategori' },
-    { value: 'makanan_minuman', label: 'Makanan & Minuman' },
-    { value: 'jasa', label: 'Jasa' },
+    { value: 'fnb', label: 'Makanan & Minuman (FnB)' },
     { value: 'retail', label: 'Retail' },
-    { value: 'lainnya', label: 'Lainnya' },
+    { value: 'fashion', label: 'Fashion' },
+    { value: 'general', label: 'Umum' },
+    { value: 'service', label: 'Jasa / Service' },
 ];
 
 const STATUS_STYLES: Record<string, string> = {
@@ -42,13 +43,50 @@ const STATUS_LABELS: Record<string, string> = {
     cancelled: 'Dibatalkan',
 };
 
+export const getCalculatedStatus = (event: { status: string; start_date: string; end_date: string }): 'upcoming' | 'ongoing' | 'completed' | 'cancelled' => {
+    if (event.status === 'cancelled') return 'cancelled';
+    
+    const now = new Date();
+    const startDate = new Date(event.start_date);
+    const endDate = new Date(event.end_date);
+    
+    if (now > endDate) {
+        return 'completed';
+    } else if (now >= startDate && now <= endDate) {
+        return 'ongoing';
+    } else {
+        // Cek jika tanggal hari ini sama dengan tanggal start_date (tanpa memedulikan jam)
+        const isSameDay = now.toDateString() === startDate.toDateString();
+        if (isSameDay) {
+            return 'ongoing';
+        }
+        return 'upcoming';
+    }
+};
+
 export default function EventsIndex({ events, registered_event_ids, cities, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [city, setCity] = useState(filters.city || '');
     const [businessType, setBusinessType] = useState(filters.business_type || '');
 
+    const onlyRegistered = filters.only_registered === 'true' || filters.only_registered === '1';
+
     const applyFilter = () => {
-        router.get('/events', { search, business_type: businessType, city }, { preserveState: true });
+        router.get('/events', { 
+            search, 
+            business_type: businessType, 
+            city,
+            only_registered: onlyRegistered ? 'true' : '',
+        }, { preserveState: true });
+    };
+
+    const handleTabChange = (showRegistered: boolean) => {
+        router.get('/events', {
+            search,
+            business_type: businessType,
+            city,
+            only_registered: showRegistered ? 'true' : '',
+        }, { preserveState: true });
     };
 
     return (
@@ -60,6 +98,30 @@ export default function EventsIndex({ events, registered_event_ids, cities, filt
                     <p className="text-muted-foreground mt-1 text-sm">
                         Ikuti event, webinar, dan pameran menarik untuk kembangkan bisnis Anda
                     </p>
+                </div>
+
+                {/* Navigation Tabs */}
+                <div className="flex border-b border-border gap-2">
+                    <button
+                        onClick={() => handleTabChange(false)}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-[1px] transition-all duration-200 ${
+                            !onlyRegistered
+                                ? 'border-primary text-primary font-bold'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                    >
+                        Semua Event
+                    </button>
+                    <button
+                        onClick={() => handleTabChange(true)}
+                        className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-[1px] transition-all duration-200 ${
+                            onlyRegistered
+                                ? 'border-primary text-primary font-bold'
+                                : 'border-transparent text-muted-foreground hover:text-foreground'
+                        }`}
+                    >
+                        Event Saya ({registered_event_ids.length})
+                    </button>
                 </div>
 
                 {/* Filters */}
@@ -119,6 +181,7 @@ export default function EventsIndex({ events, registered_event_ids, cities, filt
                         {events.data.map((event) => {
                             const isRegistered = registered_event_ids.includes(event.id);
                             const isFull = event.max_participants !== null && event.registered_count >= event.max_participants;
+                            const calculatedStatus = getCalculatedStatus(event);
                             return (
                                 <Link
                                     key={event.id}
@@ -135,8 +198,8 @@ export default function EventsIndex({ events, registered_event_ids, cities, filt
                                                 {formatDate(event.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}
                                             </p>
                                         </div>
-                                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold text-white/90 ${STATUS_STYLES[event.status]}`}>
-                                            {STATUS_LABELS[event.status]}
+                                        <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[calculatedStatus]}`}>
+                                            {STATUS_LABELS[calculatedStatus]}
                                         </span>
                                     </div>
 

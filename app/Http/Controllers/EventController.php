@@ -27,11 +27,15 @@ class EventController extends Controller
             $query->whereJsonContains('business_types', $type);
         }
 
-        $events = $query->orderBy('start_date')->paginate(12)->withQueryString();
-
-        // Mark registered events for current user
+        // Get registered events for current user
         $registeredEventIds = EventRegistration::where('user_id', auth()->id())
             ->pluck('event_id')->toArray();
+
+        if ($request->boolean('only_registered')) {
+            $query->whereIn('id', $registeredEventIds);
+        }
+
+        $events = $query->orderBy('start_date')->paginate(12)->withQueryString();
 
         $cities = Event::distinct()->pluck('city')->filter()->values();
 
@@ -39,7 +43,7 @@ class EventController extends Controller
             'events'               => $events,
             'registered_event_ids' => $registeredEventIds,
             'cities'               => $cities,
-            'filters'              => $request->only(['search', 'city', 'business_type']),
+            'filters'              => $request->only(['search', 'city', 'business_type', 'only_registered']),
         ]);
     }
 

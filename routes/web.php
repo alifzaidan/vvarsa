@@ -58,6 +58,14 @@ Route::middleware(['auth', 'verified', 'role:admin'])
         Route::post('/plans', [\App\Http\Controllers\Admin\PlanController::class, 'store'])->name('plans.store');
         Route::put('/plans/{plan}', [\App\Http\Controllers\Admin\PlanController::class, 'update'])->name('plans.update');
         Route::delete('/plans/{plan}', [\App\Http\Controllers\Admin\PlanController::class, 'destroy'])->name('plans.destroy');
+
+        // Events Management (CRUD)
+        Route::get('/events', [\App\Http\Controllers\Admin\EventController::class, 'index'])->name('events.index');
+        Route::get('/events/create', [\App\Http\Controllers\Admin\EventController::class, 'create'])->name('events.create');
+        Route::post('/events', [\App\Http\Controllers\Admin\EventController::class, 'store'])->name('events.store');
+        Route::get('/events/{event}/edit', [\App\Http\Controllers\Admin\EventController::class, 'edit'])->name('events.edit');
+        Route::put('/events/{event}', [\App\Http\Controllers\Admin\EventController::class, 'update'])->name('events.update');
+        Route::delete('/events/{event}', [\App\Http\Controllers\Admin\EventController::class, 'destroy'])->name('events.destroy');
     });
 
 // ── Authenticated + Tenant ─────────────────────────────────────────────────

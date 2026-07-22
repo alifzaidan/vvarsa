@@ -77,7 +77,7 @@ export function AppSidebar() {
             },
             {
                 title: 'Daftar Event',
-                href: '/admin/event',
+                href: '/admin/events',
                 icon: CalendarDays,
             },
             {
