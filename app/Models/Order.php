@@ -84,7 +84,7 @@ class Order extends Model
     /**
      * Generate a unique order number like ORD-20260627-0001
      */
-    public static function generateOrderNumber(int $tenantId): string
+    public static function generateOrderNumber(string|int $tenantId): string
     {
         $date   = Carbon::now()->format('Ymd');
         $prefix = "ORD-{$date}-";

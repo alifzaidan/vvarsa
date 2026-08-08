@@ -34,7 +34,7 @@ interface CartItem {
     name: string;
     isi: number;
     harga: number;
-    quantities: Record<number, number>; // variant_id -> qty
+    quantities: Record<string | number, number>; // variant_id -> qty
 }
 
 interface PaymentMethod {
@@ -69,6 +69,18 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
     const [processing, setProcessing] = useState(false);
     const [successOrder, setSuccessOrder] = useState<string | null>(null);
 
+    // Helper: Find variant by ID (supports string/UUID and numbers)
+    const findVariant = (vId: string | number, packageId?: number) => {
+        let v = variants.find(vv => String(vv.id) === String(vId));
+        if (!v && packageId && packageId > 0) {
+            const pkg = packages.find(p => String(p.id) === String(packageId));
+            if (pkg?.variants) {
+                v = pkg.variants.find(vv => String(vv.id) === String(vId)) as any;
+            }
+        }
+        return v;
+    };
+
     // Sync activeCartItemId: if the current active package is deleted or cart becomes empty
     useEffect(() => {
         if (cart.length === 0) {
@@ -92,13 +104,27 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
     const getCartItemHpp = (item: CartItem) => {
         let total = 0;
         Object.entries(item.quantities).forEach(([vId, qty]) => {
-            const v = variants.find(vv => vv.id === Number(vId));
+            const v = findVariant(vId, item.package_id);
             if (v) {
                 total += (v.hpp ?? 0) * qty;
             }
         });
         return total;
     };
+
+    const getVariantSummary = (item: CartItem) => {
+        const selected = Object.entries(item.quantities)
+            .filter(([_, qty]) => qty > 0)
+            .map(([vId, qty]) => {
+                const v = findVariant(vId, item.package_id);
+                const name = v ? v.name.replace('Mochi ', '') : `Varian #${vId}`;
+                return `${qty}x ${name}`;
+            });
+
+        if (selected.length === 0) return 'Belum ada rasa dipilih';
+        return selected.join(', ');
+    };
+
     const totalHpp = cart.reduce((sum, item) => sum + getCartItemHpp(item), 0);
     const change = cashReceived - subtotal;
 
@@ -114,7 +140,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
             ? pkg.variants
             : variants.filter(v => Number(v.recipe_qty) === 1);
 
-        const initialQuantities: Record<number, number> = {};
+        const initialQuantities: Record<string | number, number> = {};
         allowed.forEach(v => {
             initialQuantities[v.id] = 0;
         });
@@ -201,7 +227,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
         }
     };
 
-    const adjustQty = (cartId: number, variantId: number, delta: number) => {
+    const adjustQty = (cartId: number, variantId: string | number, delta: number) => {
         setCart(prev =>
             prev.map(item => {
                 if (item.id !== cartId) return item;
@@ -225,11 +251,26 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
         );
     };
 
-    const adjustDirectQty = (cartId: number, variantId: number, delta: number) => {
+    const removeVariantFromPackage = (cartId: number, variantId: string | number) => {
+        setCart(prev =>
+            prev.map(item => {
+                if (item.id !== cartId) return item;
+                return {
+                    ...item,
+                    quantities: {
+                        ...item.quantities,
+                        [variantId]: 0,
+                    }
+                };
+            })
+        );
+    };
+
+    const adjustDirectQty = (cartId: number, variantId: string | number, delta: number) => {
         setCart(prev => {
             const updated = prev.map(item => {
                 if (item.id !== cartId) return item;
-                const v = variants.find(vv => vv.id === variantId);
+                const v = findVariant(variantId);
                 if (!v) return item;
 
                 const currentQty = item.quantities[variantId] ?? 0;
@@ -243,7 +284,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                 };
             });
             return updated.filter(item => {
-                const vId = Number(Object.keys(item.quantities)[0]);
+                const vId = Object.keys(item.quantities)[0];
                 return (item.quantities[vId] ?? 0) > 0;
             });
         });
@@ -268,11 +309,11 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
         setProcessing(true);
 
         const items = cart.flatMap(item => {
-            const result: { variant_id: number; qty: number; paket_isi: number; paket_harga: number }[] = [];
+            const result: { variant_id: string | number; qty: number; paket_isi: number; paket_harga: number }[] = [];
             Object.entries(item.quantities).forEach(([vId, qty]) => {
                 for (let i = 0; i < qty; i++) {
                     result.push({
-                        variant_id: Number(vId),
+                        variant_id: vId,
                         qty: 1,
                         paket_isi: item.isi,
                         paket_harga: item.package_id === 0 ? item.harga / qty : item.harga,
@@ -340,6 +381,11 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                         <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">
                                             Isi {pkg.capacity} Pcs
                                         </span>
+                                        {pkg.description && (
+                                            <span className="text-[10px] text-muted-foreground/80 line-clamp-2 max-w-full leading-snug px-1">
+                                                {pkg.description}
+                                            </span>
+                                        )}
                                         <span className="text-sm font-bold text-indigo-600 mt-1">
                                             {formatRupiah(Number(pkg.price))}
                                         </span>
@@ -351,7 +397,31 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
 
                     {/* Section 2: Varian Rasa */}
                     <div className="bg-card border border-border rounded-2xl p-5 shadow-sm space-y-4">
-                        <h2 className="text-sm font-semibold">Pilih Varian Rasa</h2>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3">
+                            <div>
+                                <h2 className="text-sm font-semibold">Pilih Varian Rasa</h2>
+                                <p className="text-xs text-muted-foreground">Klik varian di bawah untuk mengisi rasa paket</p>
+                            </div>
+                            {packages.length > 0 && (
+                                (() => {
+                                    const activeItem = cart.find(c => c.id === activeCartItemId);
+                                    if (!activeItem) return null;
+                                    const totalSelectedInActive = Object.values(activeItem.quantities).reduce((sum, q) => sum + q, 0);
+                                    const isComplete = totalSelectedInActive === activeItem.isi;
+                                    return (
+                                        <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 rounded-xl px-3 py-1.5 text-xs shrink-0">
+                                            <span className="font-bold text-indigo-600 dark:text-indigo-400">{activeItem.name}:</span>
+                                            <span className="font-medium text-foreground max-w-[200px] sm:max-w-[260px] truncate" title={getVariantSummary(activeItem)}>
+                                                {getVariantSummary(activeItem)}
+                                            </span>
+                                            <span className={`font-bold ml-1 px-1.5 py-0.5 rounded text-[10px] ${isComplete ? 'bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300' : 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300'}`}>
+                                                {totalSelectedInActive}/{activeItem.isi}
+                                            </span>
+                                        </div>
+                                    );
+                                })()
+                            )}
+                        </div>
                         {variants.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
                                 <ShoppingBag size={40} className="mb-3 opacity-30" />
@@ -373,27 +443,63 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                         });
                                     }
 
+                                    const activeItem = cart.find(c => c.id === activeCartItemId);
+                                    const totalSelectedInActive = activeItem
+                                        ? Object.values(activeItem.quantities).reduce((sum, q) => sum + q, 0)
+                                        : 0;
+                                    const isPackageFull = activeItem ? totalSelectedInActive >= activeItem.isi : false;
+
                                     return (
-                                        <button
+                                        <div
                                             key={v.id}
-                                            type="button"
                                             onClick={() => handleVariantClick(v)}
-                                            className={`relative group text-left rounded-xl border p-3.5 transition-all hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 ${currentQty > 0
-                                                    ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-600 shadow-sm'
-                                                    : 'bg-card border-border hover:border-indigo-200'
+                                            className={`relative group text-left rounded-xl border p-3.5 transition-all select-none ${currentQty > 0
+                                                    ? 'bg-indigo-50/80 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-600 shadow-sm'
+                                                    : 'bg-card border-border hover:border-indigo-200 cursor-pointer hover:shadow-sm'
                                                 }`}
                                         >
-                                            {currentQty > 0 && (
-                                                <div className="absolute top-2 right-2 bg-indigo-600 text-white text-[10px] font-bold w-4.5 h-4.5 rounded-full flex items-center justify-center">
-                                                    {currentQty}
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center">
+                                                    <ShoppingBag size={14} className="text-indigo-500" />
                                                 </div>
-                                            )}
-                                            <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-2">
-                                                <ShoppingBag size={14} className="text-indigo-500" />
+                                                {currentQty > 0 && packages.length > 0 && (
+                                                    <div
+                                                        className="flex items-center gap-1 bg-indigo-600 text-white rounded-lg p-0.5 shadow-sm"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (activeCartItemId !== null) {
+                                                                    adjustQty(activeCartItemId, v.id, -1);
+                                                                }
+                                                            }}
+                                                            className="w-5 h-5 rounded hover:bg-indigo-700 active:bg-indigo-800 flex items-center justify-center text-xs font-bold transition-colors"
+                                                            title="Kurangi varian"
+                                                        >
+                                                            <Minus size={11} />
+                                                        </button>
+                                                        <span className="text-xs font-bold px-1 min-w-[1rem] text-center">{currentQty}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleVariantClick(v)}
+                                                            disabled={isPackageFull}
+                                                            className="w-5 h-5 rounded hover:bg-indigo-700 active:bg-indigo-800 flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-40"
+                                                            title="Tambah varian"
+                                                        >
+                                                            <Plus size={11} />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {currentQty > 0 && packages.length === 0 && (
+                                                    <div className="bg-indigo-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                                                        {currentQty}
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className="font-medium text-xs leading-tight mb-1 truncate">{v.name.replace('Mochi ', '')}</div>
                                             <div className="text-indigo-600 font-bold text-xs">{formatRupiah(v.sell_price)}</div>
-                                        </button>
+                                        </div>
                                     );
                                 })}
                             </div>
@@ -410,7 +516,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                             Keranjang
                             {cart.length > 0 && (
                                 <span className="bg-indigo-600 text-white text-xs rounded-full px-1.5 py-0.5">
-                                    {packages.length > 0 ? `${cart.length} paket` : `${cart.reduce((s, i) => s + i.quantities[Number(Object.keys(i.quantities)[0])], 0)} item`}
+                                    {packages.length > 0 ? `${cart.length} paket` : `${cart.reduce((s, i) => s + (i.quantities[Object.keys(i.quantities)[0]] ?? 0), 0)} item`}
                                 </span>
                             )}
                         </h2>
@@ -440,9 +546,9 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                         {cart.map((item) => {
                             if (item.package_id === 0) {
                                 // Direct variant item layout
-                                const variantId = Number(Object.keys(item.quantities)[0]);
+                                const variantId = Object.keys(item.quantities)[0];
                                 const qty = item.quantities[variantId];
-                                const v = variants.find(vv => vv.id === variantId);
+                                const v = findVariant(variantId);
                                 if (!v) return null;
 
                                 return (
@@ -526,35 +632,60 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                                         </button>
                                     </div>
 
+                                    {/* Detail Varian Summary Badge */}
+                                    <div className="bg-muted/50 dark:bg-muted/30 rounded-lg p-2 border border-border/40 text-xs">
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                                            Detail Rasa Varian:
+                                        </span>
+                                        <span className={`font-semibold text-xs ${totalSelected > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/70 font-normal italic'}`}>
+                                            {getVariantSummary(item)}
+                                        </span>
+                                    </div>
+
                                     {/* Selected Flavor Counts */}
                                     <div className="space-y-1.5">
                                         {Object.entries(item.quantities).map(([vId, qty]) => {
                                             if (qty === 0) return null;
-                                            const v = variants.find(vv => vv.id === Number(vId));
+                                            const v = findVariant(vId, item.package_id);
                                             if (!v) return null;
                                             return (
                                                 <div key={vId} className="flex items-center justify-between gap-2 text-xs bg-muted/40 px-2.5 py-1.5 rounded-lg border border-border/40">
                                                     <span className="font-medium truncate">{v.name.replace('Mochi ', '')}</span>
                                                     <div className="flex items-center gap-1.5 shrink-0">
                                                         <button
+                                                            type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 adjustQty(item.id, v.id, -1);
                                                             }}
                                                             className="w-5 h-5 rounded bg-background hover:bg-muted border border-border flex items-center justify-center text-[10px]"
+                                                            title="Kurangi 1"
                                                         >
-                                                            -
+                                                            <Minus size={10} />
                                                         </button>
                                                         <span className="font-bold w-4 text-center">{qty}</span>
                                                         <button
+                                                            type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 adjustQty(item.id, v.id, 1);
                                                             }}
                                                             disabled={isComplete}
                                                             className="w-5 h-5 rounded bg-background hover:bg-muted border border-border flex items-center justify-center text-[10px] disabled:opacity-40"
+                                                            title="Tambah 1"
                                                         >
-                                                            +
+                                                            <Plus size={10} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeVariantFromPackage(item.id, v.id);
+                                                            }}
+                                                            className="text-rose-400 hover:text-rose-600 transition-colors ml-1 p-0.5"
+                                                            title="Hapus varian ini"
+                                                        >
+                                                            <Trash2 size={12} />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -687,7 +818,7 @@ export default function PosPage({ variants, packages, paymentMethods = [] }: Pro
                             {/* Total */}
                             <div className="bg-muted/50 rounded-xl p-3.5 space-y-1.5">
                                 <div className="flex justify-between text-sm text-muted-foreground">
-                                    <span>Subtotal ({packages.length > 0 ? `${cart.length} paket` : `${cart.reduce((s, i) => s + i.quantities[Number(Object.keys(i.quantities)[0])], 0)} item`})</span>
+                                    <span>Subtotal ({packages.length > 0 ? `${cart.length} paket` : `${cart.reduce((s, i) => s + (i.quantities[Object.keys(i.quantities)[0]] ?? 0), 0)} item`})</span>
                                     <span>{formatRupiah(subtotal)}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-base">

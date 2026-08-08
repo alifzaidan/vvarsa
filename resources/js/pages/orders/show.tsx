@@ -250,7 +250,6 @@ export default function OrderShow({ order, paymentMethods = [] }: Props) {
                                 {/* Estimasi untung per paket */}
                                 {group.hpp > 0 && (
                                     <div className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 border-t border-emerald-100 dark:border-emerald-800 flex justify-between text-xs text-emerald-700 dark:text-emerald-400">
-                                        <span>Estimasi untung paket ini</span>
                                         <span className="font-semibold">+{formatRupiah(group.paket_harga - group.hpp)}</span>
                                     </div>
                                 )}
@@ -274,18 +273,6 @@ export default function OrderShow({ order, paymentMethods = [] }: Props) {
                             <span>Total</span>
                             <span>{formatRupiah(order.total)}</span>
                         </div>
-                        {totalHpp > 0 && (
-                            <div className="flex justify-between text-xs text-muted-foreground pt-0.5">
-                                <span>Estimasi HPP</span>
-                                <span>{formatRupiah(totalHpp)}</span>
-                            </div>
-                        )}
-                        {totalProfit > 0 && (
-                            <div className="flex justify-between text-xs font-medium text-emerald-600">
-                                <span>Estimasi Untung</span>
-                                <span>{formatRupiah(totalProfit)}</span>
-                            </div>
-                        )}
                     </div>
                 </div>
 

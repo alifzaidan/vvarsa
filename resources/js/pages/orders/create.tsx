@@ -31,7 +31,7 @@ interface CartItem {
     name: string;
     isi: number;
     harga: number;
-    quantities: Record<number, number>; // variant_id -> qty
+    quantities: Record<string | number, number>; // variant_id -> qty
 }
 
 interface Props {
@@ -46,21 +46,46 @@ export default function OrderCreate({ variants, packages }: Props) {
         customer_name: '',
         customer_phone: '',
         notes: '',
-        items: [] as { variant_id: number; qty: number; paket_isi: number; paket_harga: number }[],
+        items: [] as { variant_id: string | number; qty: number; paket_isi: number; paket_harga: number }[],
     });
 
     const [cart, setCart] = useState<CartItem[]>([]);
+
+    // ── Helper: Cari Varian ───────────────────────────────────────────────────
+    const findVariant = (vId: string | number, packageId?: number) => {
+        let v = variants.find(vv => String(vv.id) === String(vId));
+        if (!v && packageId && packageId > 0) {
+            const pkg = packages.find(p => String(p.id) === String(packageId));
+            if (pkg?.variants) {
+                v = pkg.variants.find(vv => String(vv.id) === String(vId)) as any;
+            }
+        }
+        return v;
+    };
 
     // ── Helper: Hitung HPP untuk satu baris cart ──────────────────────────────
     const getCartItemHpp = (item: CartItem) => {
         let total = 0;
         Object.entries(item.quantities).forEach(([vId, qty]) => {
-            const v = variants.find(vv => vv.id === Number(vId));
+            const v = findVariant(vId, item.package_id);
             if (v) {
                 total += (v.hpp ?? 0) * qty;
             }
         });
         return total;
+    };
+
+    const getVariantSummary = (item: CartItem) => {
+        const selected = Object.entries(item.quantities)
+            .filter(([_, qty]) => qty > 0)
+            .map(([vId, qty]) => {
+                const v = findVariant(vId, item.package_id);
+                const name = v ? v.name.replace('Mochi ', '') : `Varian #${vId}`;
+                return `${qty}x ${name}`;
+            });
+
+        if (selected.length === 0) return 'Belum ada rasa dipilih';
+        return selected.join(', ');
     };
 
     // ── Ringkasan ──────────────────────────────────────────────────────────────
@@ -80,7 +105,7 @@ export default function OrderCreate({ variants, packages }: Props) {
             ? pkg.variants
             : variants.filter(v => Number(v.recipe_qty) === 1);
 
-        const initialQuantities: Record<number, number> = {};
+        const initialQuantities: Record<string | number, number> = {};
         allowed.forEach(v => {
             initialQuantities[v.id] = 0;
         });
@@ -132,7 +157,7 @@ export default function OrderCreate({ variants, packages }: Props) {
     };
 
     // ── Sesuaikan Qty Rasa dalam Paket ──────────────────────────────────────────
-    const adjustQty = (cartId: number, variantId: number, delta: number) => {
+    const adjustQty = (cartId: number, variantId: string | number, delta: number) => {
         setCart(prev =>
             prev.map(item => {
                 if (item.id !== cartId) return item;
@@ -157,11 +182,11 @@ export default function OrderCreate({ variants, packages }: Props) {
         );
     };
 
-    const adjustDirectQty = (cartId: number, variantId: number, delta: number) => {
+    const adjustDirectQty = (cartId: number, variantId: string | number, delta: number) => {
         setCart(prev => {
             const updated = prev.map(item => {
                 if (item.id !== cartId) return item;
-                const v = variants.find(vv => vv.id === variantId);
+                const v = findVariant(variantId);
                 if (!v) return item;
 
                 const currentQty = item.quantities[variantId] ?? 0;
@@ -175,7 +200,7 @@ export default function OrderCreate({ variants, packages }: Props) {
                 };
             });
             return updated.filter(item => {
-                const vId = Number(Object.keys(item.quantities)[0]);
+                const vId = Object.keys(item.quantities)[0];
                 return (item.quantities[vId] ?? 0) > 0;
             });
         });
@@ -190,11 +215,11 @@ export default function OrderCreate({ variants, packages }: Props) {
     useEffect(() => {
         // Flatten: tiap qty rasa jadi 1 baris item dengan paket_isi & paket_harga
         const items = cart.flatMap(item => {
-            const result: { variant_id: number; qty: number; paket_isi: number; paket_harga: number }[] = [];
+            const result: { variant_id: string | number; qty: number; paket_isi: number; paket_harga: number }[] = [];
             Object.entries(item.quantities).forEach(([vId, qty]) => {
                 for (let i = 0; i < qty; i++) {
                     result.push({
-                        variant_id: Number(vId),
+                        variant_id: vId,
                         qty: 1,
                         paket_isi: item.isi,
                         paket_harga: item.package_id === 0 ? item.harga / qty : item.harga,
@@ -362,9 +387,9 @@ export default function OrderCreate({ variants, packages }: Props) {
                                 {cart.map((item) => {
                                     if (item.package_id === 0) {
                                         // Direct variant layout in cart
-                                        const variantId = Number(Object.keys(item.quantities)[0]);
+                                        const variantId = Object.keys(item.quantities)[0];
                                         const qty = item.quantities[variantId];
-                                        const v = variants.find(vv => vv.id === variantId);
+                                        const v = findVariant(variantId);
                                         if (!v) return null;
 
                                         return (
@@ -447,6 +472,16 @@ export default function OrderCreate({ variants, packages }: Props) {
                                                 )}
                                             </div>
 
+                                            {/* Detail Varian Summary Badge */}
+                                            <div className="bg-muted/50 dark:bg-muted/30 rounded-lg p-2 border border-border/40 text-xs">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-0.5">
+                                                    Detail Rasa Varian:
+                                                </span>
+                                                <span className={`font-semibold text-xs ${Object.values(item.quantities).reduce((s, q) => s + q, 0) > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground/70 font-normal italic'}`}>
+                                                    {getVariantSummary(item)}
+                                                </span>
+                                            </div>
+
                                             {/* List Rasa & Stepper */}
                                             <div className="space-y-2.5 pt-1">
                                                 {(() => {
@@ -505,10 +540,6 @@ export default function OrderCreate({ variants, packages }: Props) {
 
                                 {/* Subtotal */}
                                 <div className="border-t border-border pt-3 mt-1 flex items-end justify-between">
-                                    <div className="text-xs text-muted-foreground leading-5">
-                                        Estimasi HPP: {formatRupiah(totalHpp)}<br />
-                                        Estimasi untung: {formatRupiah(subtotal - totalHpp)}
-                                    </div>
                                     <div className="text-right">
                                         <div className="text-xs text-muted-foreground">Total</div>
                                         <div className="text-xl font-bold">{formatRupiah(subtotal)}</div>
