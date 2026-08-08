@@ -105,6 +105,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Apakah user ini supervisor dari tenant-nya.
+     */
+    public function isTenantSupervisor(): bool
+    {
+        return $this->hasRole('supervisor');
+    }
+
+    /**
      * Apakah user ini staff dari tenant-nya.
      */
     public function isTenantStaff(): bool
@@ -117,9 +125,10 @@ class User extends Authenticatable
      */
     public function primaryRole(): string
     {
-        if ($this->hasRole('admin'))  return 'admin';
-        if ($this->hasRole('owner'))  return 'owner';
-        if ($this->hasRole('staff'))  return 'staff';
+        if ($this->hasRole('admin'))       return 'admin';
+        if ($this->hasRole('owner'))       return 'owner';
+        if ($this->hasRole('supervisor'))  return 'supervisor';
+        if ($this->hasRole('staff'))       return 'staff';
         return 'guest';
     }
 }

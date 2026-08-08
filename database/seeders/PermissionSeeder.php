@@ -50,7 +50,8 @@ class PermissionSeeder extends Seeder
 
             // Tenant Owner
             'subscription.manage',         // upgrade/downgrade plan
-            'tenant.members.manage',       // undang, hapus staff
+            'tenant.members.manage',       // undang, hapus, ubah role staff (owner only)
+            'tenant.members.request',      // ajukan penambahan anggota (supervisor)
         ];
 
         foreach ($permissions as $permission) {
@@ -87,6 +88,27 @@ class PermissionSeeder extends Seeder
             'tax.consultation',
             'subscription.manage',
             'tenant.members.manage',
+            'tenant.members.request',
+        ]);
+
+        // SUPERVISOR — akses sama seperti owner, tapi tidak bisa manage member (hanya request)
+        $supervisor = Role::firstOrCreate(['name' => 'supervisor']);
+        $supervisor->syncPermissions([
+            'inventory.products.view',
+            'inventory.products.manage',
+            'inventory.stock.manage',
+            'finance.view',
+            'finance.transactions.manage',
+            'events.view',
+            'events.register',
+            'community.view',
+            'community.post',
+            'community.reply',
+            'suppliers.view',
+            'tax.view',
+            'tax.consultation',
+            'subscription.manage',
+            'tenant.members.request',   // hanya bisa request, tidak bisa langsung manage
         ]);
 
         // STAFF — karyawan (dalam tenant)

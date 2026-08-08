@@ -4,23 +4,24 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { type PaginatedData, type Supplier } from '@/types/mrp';
 import { Button } from '@/components/ui/button';
-import { Plus, Search, MapPin, Phone, ExternalLink, Edit, CheckCircle } from 'lucide-react';
+import { Plus, Search, MapPin, Phone, Edit, CheckCircle } from 'lucide-react';
 
 const breadcrumbs: BreadcrumbItem[] = [{ title: 'Supplier', href: '/suppliers' }];
+
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+    fnb: 'Food & Beverage',
+    retail: 'Retail / Toko',
+    fashion: 'Fashion & Tekstil',
+    services: 'Jasa / Services',
+    general: 'Manufaktur / Umum',
+};
 
 interface Props {
     suppliers: PaginatedData<Supplier>;
     cities: string[];
-    filters: { search?: string; business_type?: string; city?: string };
+    filters: { search?: string; city?: string };
     business_type: string; // Business type dari tenant
 }
-
-const BUSINESS_TYPES = [
-    { value: '', label: 'Semua' },
-    { value: 'fnb', label: 'FnB' },
-    { value: 'retail', label: 'Retail' },
-    { value: 'fashion', label: 'Fashion' },
-];
 
 function StarRating({ rating }: { rating: number }) {
     return (
@@ -38,13 +39,12 @@ function StarRating({ rating }: { rating: number }) {
 export default function SuppliersIndex({ suppliers, cities, filters, business_type }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [city, setCity] = useState(filters.city || '');
-    const [bType, setBType] = useState(filters.business_type || '');
 
-    const applyFilter = (type?: string) => {
-        const selectedType = type !== undefined ? type : bType;
-        setBType(selectedType);
-        router.get('/suppliers', { search, city, business_type: selectedType }, { preserveState: true, replace: true });
+    const applyFilter = () => {
+        router.get('/suppliers', { search, city }, { preserveState: true, replace: true });
     };
+
+    const businessTypeLabel = BUSINESS_TYPE_LABELS[business_type] ?? business_type;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -55,7 +55,10 @@ export default function SuppliersIndex({ suppliers, cities, filters, business_ty
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight">Rekomendasi Supplier</h1>
-                        <p className="text-muted-foreground text-sm">Kelola data supplier terpercaya Anda.</p>
+                        <p className="text-muted-foreground text-sm">
+                            Supplier untuk kategori bisnis:{' '}
+                            <span className="font-semibold text-foreground">{businessTypeLabel}</span>
+                        </p>
                     </div>
                     <Link href="/suppliers/create" className="bg-primary text-primary-foreground flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium hover:bg-primary/90">
                         <Plus size={16} /> Tambah Supplier
@@ -63,31 +66,16 @@ export default function SuppliersIndex({ suppliers, cities, filters, business_ty
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col gap-4">
-                    <div className="flex gap-2 flex-wrap">
-                        {BUSINESS_TYPES.map((t) => (
-                            <button
-                                key={t.value}
-                                onClick={() => applyFilter(t.value)}
-                                className={`rounded-xl px-4 py-2 text-sm font-medium transition-colors ${bType === t.value ? 'bg-primary text-primary-foreground' : 'bg-card border border-border hover:bg-muted'
-                                    }`}
-                            >
-                                {t.label}
-                            </button>
-                        ))}
+                <div className="flex flex-col sm:flex-row gap-3 bg-card border border-border rounded-2xl p-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
+                        <input className="border rounded-xl px-9 py-2 text-sm w-full" placeholder="Cari supplier..." value={search} onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && applyFilter()} />
                     </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 bg-card border border-border rounded-2xl p-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-2.5 text-muted-foreground" size={16} />
-                            <input className="border rounded-xl px-9 py-2 text-sm w-full" placeholder="Cari supplier..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                        </div>
-                        <select className="border rounded-xl px-4 py-2 text-sm" value={city} onChange={(e) => setCity(e.target.value)}>
-                            <option value="">Semua Kota</option>
-                            {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                        <Button onClick={() => applyFilter()}>Cari</Button>
-                    </div>
+                    <select className="border rounded-xl px-4 py-2 text-sm" value={city} onChange={(e) => setCity(e.target.value)}>
+                        <option value="">Semua Kota</option>
+                        {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <Button onClick={() => applyFilter()}>Cari</Button>
                 </div>
 
                 {/* Grid Cards */}

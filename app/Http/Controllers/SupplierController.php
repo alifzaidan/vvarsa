@@ -14,6 +14,9 @@ class SupplierController extends Controller
     {
         $tenant = app('tenant');
 
+        // Selalu gunakan business_type dari tenant — tidak bisa di-override dari request
+        $businessType = $tenant->business_type ?? 'fnb';
+
         $query = Supplier::where('is_active', true)
             ->where(function ($q) use ($tenant) {
                 $q->whereNull('tenant_id')
@@ -28,11 +31,8 @@ class SupplierController extends Controller
             });
         }
 
-        if ($businessType = $request->get('business_type')) {
-            $query->where(function ($q) use ($businessType) {
-                $q->where('business_type', $businessType)->orWhereNull('business_type');
-            });
-        }
+        // Filter selalu berdasarkan business_type tenant
+        $query->where('business_type', $businessType);
 
         if ($city = $request->get('city')) {
             $query->where('city', $city);
@@ -43,12 +43,20 @@ class SupplierController extends Controller
             ->paginate(9)
             ->withQueryString();
 
-        $cities = Supplier::distinct()->whereNotNull('city')->pluck('city')->values();
+        $cities = Supplier::where('is_active', true)
+            ->where('business_type', $businessType)
+            ->distinct()
+            ->whereNotNull('city')
+            ->pluck('city')
+            ->values();
 
         return Inertia::render('suppliers/index', [
             'suppliers'     => $suppliers,
             'cities'        => $cities,
-            'filters'       => $request->only(['search', 'business_type', 'city']),
+            'filters'       => [
+                'search' => $request->get('search', ''),
+                'city'   => $request->get('city', ''),
+            ],
             'business_type' => $tenant->business_type,
         ]);
     }
@@ -70,7 +78,7 @@ class SupplierController extends Controller
             'website'            => 'nullable|url|max:255',
             'address'            => 'nullable|string',
             'city'               => 'nullable|string|max:100',
-            'business_type'      => 'nullable|string|in:fnb,retail,fashion',
+            'business_type'      => 'nullable|string|in:fnb,retail,fashion,services,general',
             'product_categories' => 'nullable|array',
             'description'        => 'nullable|string',
         ]);
@@ -105,7 +113,7 @@ class SupplierController extends Controller
     {
         $tenant = app('tenant');
 
-        // Proteksi: Pastikan tenant hanya bisa mengupdate supplier miliknya sendiri
+        // Proteksi: Pastikan tenant hanya bisa mengubah supplier miliknya sendiri
         if ($supplier->tenant_id !== $tenant->id) {
             abort(403, 'Anda tidak memiliki izin untuk mengubah supplier ini.');
         }
@@ -118,7 +126,7 @@ class SupplierController extends Controller
             'website'            => 'nullable|url|max:255',
             'address'            => 'nullable|string',
             'city'               => 'nullable|string|max:100',
-            'business_type'      => 'nullable|string|in:fnb,retail,fashion',
+            'business_type'      => 'nullable|string|in:fnb,retail,fashion,services,general',
             'product_categories' => 'nullable|array',
             'description'        => 'nullable|string',
         ]);

@@ -46,8 +46,9 @@ export function AppSidebar() {
     const { auth } = usePage<SharedData>().props;
     const user = auth.user;
 
-    const isAdmin = user?.roles?.includes('admin');
-    const isOwner = user?.roles?.includes('owner');
+    const isAdmin      = user?.roles?.includes('admin');
+    const isOwner      = user?.roles?.includes('owner');
+    const isSupervisor = user?.roles?.includes('supervisor');
 
     // ── Platform Admin Navigation ──
     if (isAdmin) {
@@ -217,13 +218,17 @@ export function AppSidebar() {
         },
     ];
 
-    // Subscription & Team management are only visible to the owner
-    if (isOwner) {
+    // Anggota Tim: owner & supervisor bisa akses (supervisor perlu approval)
+    if (isOwner || isSupervisor) {
         businessNavItems.push({
             title: 'Anggota Tim',
             href: '/members',
             icon: Users,
         });
+    }
+
+    // Langganan, Resep, Paket: hanya owner
+    if (isOwner) {
         businessNavItems.push({
             title: 'Langganan',
             href: '/subscription',

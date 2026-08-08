@@ -26,7 +26,11 @@ class EnsureTenantMiddleware
         }
 
         if (!$user->tenant_id) {
-            abort(403, 'Akun Anda belum terhubung ke bisnis manapun.');
+            // User belum setup bisnis — arahkan ke halaman pilih bisnis
+            if ($request->routeIs('choose-business') || $request->routeIs('choose-business.store')) {
+                return $next($request);
+            }
+            return redirect()->route('choose-business');
         }
 
         // Load tenant dengan plan dan subscription aktif

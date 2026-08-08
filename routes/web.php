@@ -72,8 +72,8 @@ Route::middleware(['auth', 'verified', 'role:admin'])
 Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTenantMiddleware::class])
     ->group(function () {
 
-    // ── Shared Tenant Routes (Owner & Staff) ──
-    Route::middleware(['role:owner|staff'])->group(function () {
+    // ── Shared Tenant Routes (Owner, Supervisor & Staff) ──
+    Route::middleware(['role:owner|supervisor|staff'])->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -133,6 +133,14 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTenantMiddlewa
 
         // POS / Kasir (Owner & Staff)
         Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
+    });
+
+    // ── Owner & Supervisor Routes — Akses Manajemen Member ──
+    Route::middleware(['role:owner|supervisor'])->group(function () {
+        Route::prefix('members')->name('members.')->group(function () {
+            Route::get('/', [MemberController::class, 'index'])->name('index');
+            Route::post('/', [MemberController::class, 'store'])->name('store');
+        });
     });
 
     // ── Owner-Only Tenant Routes ──
@@ -196,12 +204,12 @@ Route::middleware(['auth', 'verified', \App\Http\Middleware\EnsureTenantMiddlewa
         Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
         Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgrade'])->name('subscription.upgrade');
 
-        // Member / Team Management
+        // Member Management (Owner only: update role, delete, approve, reject)
         Route::prefix('members')->name('members.')->group(function () {
-            Route::get('/', [MemberController::class, 'index'])->name('index');
-            Route::post('/', [MemberController::class, 'store'])->name('store');
             Route::put('/{member}', [MemberController::class, 'update'])->name('update');
             Route::delete('/{member}', [MemberController::class, 'destroy'])->name('destroy');
+            Route::post('/requests/{memberRequest}/approve', [MemberController::class, 'approve'])->name('requests.approve');
+            Route::post('/requests/{memberRequest}/reject',  [MemberController::class, 'reject'])->name('requests.reject');
         });
     });
 });
