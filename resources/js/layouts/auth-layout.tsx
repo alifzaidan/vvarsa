@@ -1,9 +1,33 @@
-import AuthLayoutTemplate from '@/layouts/auth/auth-simple-layout';
+import AuthSplitLayout from '@/layouts/auth/auth-split-layout';
+import React from 'react';
 
-export default function AuthLayout({ children, title, description, ...props }: { children: React.ReactNode; title: string; description: string }) {
+interface AuthLayoutProps {
+    children: React.ReactNode;
+    title?: string;
+    description?: string;
+    bgImage?: string;
+    reverse?: boolean;
+}
+
+export default function AuthLayout({ 
+    children, 
+    title, 
+    description, 
+    reverse,
+    ...props 
+}: AuthLayoutProps) {
+    // Otomatis bernilai true jika route saat ini adalah 'register', 
+    // atau jika prop reverse dikirim manual secara eksplisit.
+    const isRegister = reverse ?? (typeof route !== 'undefined' ? route().current('register') : false);
+
     return (
-        <AuthLayoutTemplate title={title} description={description} {...props}>
+        <AuthSplitLayout 
+            title={title} 
+            description={description} 
+            reverse={isRegister}
+            {...props}
+        >
             {children}
-        </AuthLayoutTemplate>
+        </AuthSplitLayout>
     );
 }
